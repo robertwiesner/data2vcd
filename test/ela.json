@@ -1,0 +1,29 @@
+
+{
+	"ELA600" : {
+		"ELA600_BF" : {
+			"<wire>" : {
+				"valid" : { "end" : 0, "start" : 0 },
+				"write" : { "end" : 1, "start" : 1 },
+				"addr"  : { "end" : 90, "start" : 32 }
+			}
+		},
+		"<node>" : {
+			"CH[0]" : { "<ref>" : "ELA600_BF", "<idx>" : 0},
+			"CH[1]" : { "<ref>" : "ELA600_BF", "<idx>" : 1},
+			"CH[2]" : { "<ref>" : "ELA600_BF", "<idx>" : 2},
+			"CH[3]" : { "<ref>" : "ELA600_BF", "<idx>" : 3}
+		}
+	},
+
+	"CLOCK" : {
+		"<wire>" : { "CLOCK" : {"end" : 0, "start" : 0} }
+	},
+	"<node>" : {
+		"CLK" : { "<ref>" : "CLOCK", "<idx>" : 0 },
+		"ELA0" : { "<ref>" : "ELA600", "<idx>" : 0x1000 },
+		"ELA1" : { "<ref>" : "ELA600", "<idx>" : 0x1100 },
+		"ELA2" : { "<ref>" : "ELA600", "<idx>" : 0x1200 },
+		"ELA3" : { "<ref>" : "ELA600", "<idx>" : 0x1300 }
+	}
+}
