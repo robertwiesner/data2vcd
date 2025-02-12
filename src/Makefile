@@ -4,14 +4,12 @@ OBJ = cmodule.o  \
 	coutput.o    \
 	cvcdoutput.o \
 	cjson.o      \
-	cbitfield.o  \
-	main.o
+	cbitfield.o
 
-CXXFLAGS = -g 
-
-json2vcd: $(OBJ)
-	g++ -g -o json2vcd $(OBJ)
+CXXFLAGS = -g
+libdata2vcd.so: $(OBJ)
+	ar rcs  data2vcd.a $(OBJ)
 
 clean:
 	-rm $(OBJ)
-	-rm json2vcd
+	-rm libdata2vcd.so
