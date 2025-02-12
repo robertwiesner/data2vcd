@@ -1,3 +1,24 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+(c) 2025 Robert Wiesner
+*/
+
 #include "cvcdoutput.h"
 #include "cmodule.h"
 #include "cwire.h"
@@ -56,7 +77,6 @@ void cVCDOutput::headerWire(cWire *pW, std::string prefix)
 void cVCDOutput::headerEnd()
 {
     // over all wires generate the short names
-    size_t wireCount = pLastModule->getWireCount();
     fprintf(pOut, "$enddefinitions $end\n");
     fprintf(pOut, "$dumpvars\n");
 
@@ -66,30 +86,19 @@ void cVCDOutput::headerEnd()
             char *pPtr = aBuffer;
             const char *pSN = pW->getShortName();
             size_t bitLen = pW->getBits();
-            bool addSpace = 1 < strlen(pSN);
 
-            switch(pW->getWireType()) {
-
-            case WT_BOOL:
-                *pPtr++ = 'x';
-                break;
-
-            case WT_BITS:
-            case WT_HEX:
-                if (bitLen == 1) {
-                    *pPtr++ = 'x';
-                    break;
-                }
-                addSpace = true;
+            if (1 < bitLen) {
                 *pPtr++ = 'b';
                 for (size_t idx = bitLen; 0 < idx--; ) {
                     *pPtr++ = 'x';
                 }
-                break;
-            }
 
-            if (addSpace) {
                 *pPtr++ = ' ';
+            } else {
+                *pPtr++ = 'x';
+                if (pSN[1]) {
+                    *pPtr++ = ' ';
+                }
             }
 
             while (*pSN) {
@@ -114,38 +123,22 @@ cVCDOutput::getStringValue(cWire *pW)
     const char *pSN = pW->getShortName();
     const unsigned char *pVal = pW->getBuffer();
     size_t bitLen = pW->getBits();
-    bool addSpace = 1 < strlen(pSN);
+    char one  = pW->isSet() ? '1' : 'x';
+    char zero = pW->isSet() ? '0' : 'x';
 
-    switch(pW->getWireType()) {
-    case WT_NONE:
-        break;
-
-    case WT_BOOL:
-        *pPtr++ = *pVal ? '1' : '0';
-        break;
-
-    case WT_BITS:
-    case WT_HEX:
-        if (bitLen == 1) {
-            *pPtr++ = *pVal & 1 ? '1' : '0';
-            break;
-        }
-        addSpace = true;
+    if (1 < bitLen) {
         *pPtr++ = 'b';
         for (size_t idx = bitLen; 0 < idx--; ) {
-            *pPtr++ = pVal[idx / 8] & (1 << (idx & 7)) ? '1' : '0';
+            *pPtr++ = pVal[idx / 8] & (1 << (idx & 8)) ? one : zero;
         }
-        break;
-
-    case WT_STR:
-        memcpy(pPtr, pVal, (bitLen + 7) / 8);
-        pPtr += (bitLen + 7) / 8;
-        break;
-    }
-
-    if (addSpace) {
         *pPtr++ = ' ';
+    } else {
+        *pPtr++ = pVal[0] & 1 ? one : zero;
+        if (pSN[1]) {
+            *pPtr++ = ' ';
+        }
     }
+
 
     while (*pSN) {
         *pPtr++ = *pSN++;

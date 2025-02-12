@@ -1,4 +1,23 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
 
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+(c) 2025 Robert Wiesner
+*/
 
 #include "cjson.h"
 
@@ -17,7 +36,7 @@ cJSONbase::generate(cJSONbase *pP, FILE *pIn)
     pBuffer[size] = 0;
     cJSONbase *pRet = cJSONbase::generate(pP, pStart);
 
-    delete pBuffer;
+    delete[] pBuffer;
 
     return pRet;
 }
@@ -215,7 +234,6 @@ char *cJSONstring::toStr(int &rLen, char *pBuffer)
 char *cJSONstring::fromStr(char *pBuffer)
 {
     withTripple = pBuffer[0] == '"' && pBuffer[1] == '"' && pBuffer[2] == '"';
-    int len = 0;
     char *pB = pBuffer + (withTripple ? 3 : 1);
 
     if (withTripple) {
@@ -244,7 +262,7 @@ char *cJSONarray::toStr(int &rLen, char *pBuffer)
 {
     char sep = '[';
 
-    for (int idx = 0; idx < value.size(); idx ++) {
+    for (size_t idx = 0; idx < value.size(); idx ++) {
         if (1 < rLen) { *pBuffer++ = sep; }
         sep = ',';
         rLen -= 1;
@@ -279,7 +297,7 @@ char *cJSONobject::toStr(int &rLen, char *pBuffer)
 {
     char sep = '{';
 
-    for (int idx = 0; idx < value.size(); idx ++) {
+    for (size_t idx = 0; idx < value.size(); idx ++) {
         cJSONobj *pO = value[idx];
         int len = strlen(pO->getName());
         if (1 < rLen) { *pBuffer++ = sep; }

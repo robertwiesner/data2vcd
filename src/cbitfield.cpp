@@ -1,4 +1,23 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
 
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+(c) 2025 Robert Wiesner
+*/
 
 #include "cbitfield.h"
 
@@ -22,12 +41,12 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
     cJSONobj    *pO;
     cJSONobject *pV = dynamic_cast<cJSONobject *>(pBase);
 
-    while (pO = pV->getObj(idx++)) {
+    while (0 != (pO = pV->getObj(idx++))) {
         if (0 == strcmp(pO->getName(), "<node>")) {
             cJSONobject *pNode = dynamic_cast<cJSONobject *>(pO->getValue());
             cJSONobj *pNodeObj;
             int nodeIdx = 0;
-            while (pNodeObj = pNode->getObj(nodeIdx++)) {
+            while (0 != (pNodeObj = pNode->getObj(nodeIdx++))) {
                 cJSONobject *pIndex = dynamic_cast<cJSONobject *>(pNodeObj->getValue());
                 cJSONscalar *pIdx = dynamic_cast<cJSONscalar *>(pIndex->getValue("<idx>"));
                 int newModIdx = modIdx + (pIdx ? pIdx->getValue() : 0);
@@ -49,12 +68,12 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
             cJSONobject *pWireList = dynamic_cast<cJSONobject *>(pO->getValue());
             cJSONobj *pWireObj;
 
-            while (pWireObj = pWireList->getObj(wireIdx++)) {
+            while (0 != (pWireObj = pWireList->getObj(wireIdx++))) {
                 cJSONobject *pWire = dynamic_cast<cJSONobject *>(pWireObj->getValue());
                 cWire *pW;
                 int start = dynamic_cast<cJSONscalar *>(pWire->getValue("start"))->getValue();
                 int end   = dynamic_cast<cJSONscalar *>(pWire->getValue("end"))->getValue();
-                pW = new cWire(WT_BITS, end - start + 1, pWireObj->getName());
+                pW = new cWire(eWT_BIT, end - start + 1, pWireObj->getName());
                 pParent->addWire(pW);
                 entry[modIdx]->wires[start] = pW;
             }
@@ -90,6 +109,6 @@ cBitfield::updateValue(unsigned long long id, int size, const char *pPtr)
             }
             pW->setValue( (len+7) / 8, pBuffer);
         }
-        delete pBuffer;
+        delete[] pBuffer;
     }
 }

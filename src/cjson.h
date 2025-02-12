@@ -1,4 +1,23 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
 
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+(c) 2025 Robert Wiesner
+*/
 
 #ifndef CJSON_H
 #define CJSON_H 1
@@ -123,7 +142,7 @@ class cJSONstring : public cJSONbase {
     size_t length;
     char *value;
     void resizeBuffer(size_t l, const char *v) {
-        int align_len = (l + 0x100) & 0xff;
+        size_t align_len = (l + 0x100) & 0xff;
         if (length != align_len) {
             if (value) {
                 delete value;
@@ -164,13 +183,13 @@ class cJSONarray : public cJSONbase {
     cJSONarray(cJSONbase *pP) : cJSONbase(eJT_ARRAY, pP) { }
     ~cJSONarray() { }
     cJSONbase *getValue(int idx) {
-        return 0 <= idx && idx < value.size() ? value[idx] : 0;
+        return 0 <= idx && ((size_t) idx) < value.size() ? value[idx] : 0;
     }
     void addValue(cJSONbase *v) {
         value.push_back(v);
     }
     void setValue(int idx, cJSONbase *v) {
-        if (0 <= idx && idx < value.size()) {
+        if (0 <= idx && ((size_t) idx) < value.size()) {
             value[idx] = v;
         }
     }
@@ -205,7 +224,7 @@ class cJSONobject : public cJSONbase {
     cJSONbase *pParent;
     std::vector<cJSONobj *>value;
     int getIndex(const char *s) {
-        for (int idx = 0; idx < value.size(); idx++) {
+        for (size_t idx = 0; idx < value.size(); idx++) {
             if (value[idx]->checkName(s)) {
                 return idx;
             }
@@ -213,7 +232,7 @@ class cJSONobject : public cJSONbase {
         return -1;
     }
     int getIndex(std::string s) {
-        for (int idx = 0; idx < value.size(); idx++) {
+        for (size_t idx = 0; idx < value.size(); idx++) {
             if (value[idx]->checkName(s)) {
                 return idx;
             }
@@ -244,7 +263,7 @@ class cJSONobject : public cJSONbase {
     ~cJSONobject() { }
 
     cJSONobj * getObj(int idx) {
-        return this != 0 && 0 <= idx && idx < value.size() ? value[idx] : 0;
+        return this != 0 && 0 <= idx && ((size_t)idx) < value.size() ? value[idx] : 0;
     }
 
     cJSONobj *getObj(const char *s) {

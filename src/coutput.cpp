@@ -1,3 +1,23 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+(c) 2025 Robert Wiesner
+*/
 
 #include "coutput.h"
 #include "cmodule.h"
@@ -36,9 +56,6 @@ void cOutput::headerWire(cWire *pW, std::string prefix)
 void cOutput::headerEnd()
 {
     // over all wires generate the short names
-
-    char aBuffer[16];
-    char *pPtr = aBuffer + sizeof(aBuffer);
     size_t wireCount = pLastModule->getWireCount();
     fprintf(pOut, "Total WireCount: %ld\n", wireCount);
     fprintf(pOut, "End Header\n");
@@ -57,18 +74,28 @@ const char *cOutput::getStringValue(cWire *pW)
     size_t bitLen = pW->getBits();
 
     switch(pW->getWireType()) {
-    case WT_NONE:
+    case eWT_NONE:
         break;
-    case WT_BOOL:
+    case eWT_BOOL:
         strcpy(pPtr, *pVal ? "TRUE" : "false");
         pPtr += strlen(pPtr);
         break;
-    case WT_BITS:
+    case eWT_BIT:
         for (size_t idx = bitLen; 0 < idx--; ) {
             *pPtr++ = pVal[idx / 8] & (1 << (idx & 7)) ? '1' : '0';
         }
         break;
-    case WT_HEX:
+    case eWT_OCT:
+        sprintf(pPtr, "%llo", pW->getAsUnsignedLongLong());
+        pPtr += strlen(pPtr);
+        break;
+    case eWT_DEC:
+        sprintf(pPtr, "%lld", pW->getAsSignedLongLong());
+        pPtr += strlen(pPtr);
+        break;
+
+    case eWT_HEX:
+    case eWT_HEXs:
         for (size_t idx = (bitLen + 3) & (~3); 0 < idx; ) {
             idx -= 4;
             int val = pVal[idx / 8];
@@ -76,7 +103,7 @@ const char *cOutput::getStringValue(cWire *pW)
             *pPtr++ = "0123456789ABCDEF"[val];
         }
         break;
-    case WT_STR:
+    case eWT_STR:
         memcpy(pPtr, pVal, (bitLen + 7) / 8);
         pPtr += (bitLen + 7) / 8;
         break;
@@ -102,7 +129,7 @@ cOutput::~cOutput()
 
 void cOutput::flush()
 {
-    for (int idx = 0; idx < items.size(); idx++) {
+    for (size_t idx = 0; idx < items.size(); idx++) {
         cWire *pW = items[idx]->pWire;
         if (pW && pW->isSet()) {
             print(pW);
