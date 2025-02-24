@@ -41,6 +41,8 @@ class cJSONbase {
     cJSONbase *pParent;
     eJSONtype type;
 
+    cJSONbase *searchArray(const char *pStr);
+    cJSONbase *searchObject(const char *pStr);
     public:
     cJSONbase(eJSONtype t, cJSONbase *pP) {
         pParent = pP;
@@ -55,6 +57,43 @@ class cJSONbase {
     eJSONtype getType() const { return this ? type : eJT_NONE; }
 
     cJSONbase *getParent() { return this ? pParent : 0; }
+
+    cJSONbase *search(const char *pStr) {
+        cJSONbase *pRet = this;
+        switch (pStr[0]) {
+        case 0:
+            return this;
+
+        case '/':
+            while (pRet->pParent) {
+                pRet = pRet->pParent;
+            }
+            return pRet->search(pStr+1);
+
+        case '.':
+            switch (pStr[1]) {
+            case '.':
+                pRet = pRet->pParent;
+                if (pStr[2] == '/') {
+                    return pRet ? pRet->search(pStr+3) : NULL;
+                } else if (pStr[2] == 0) {
+                    return pRet;
+                }
+                return NULL;
+            case '/':
+                return pRet->search(pStr+2);
+            case 0:
+                return pRet;
+            default:
+                return NULL;
+            }
+        case '[':
+            return searchArray(pStr);
+
+        default:
+            return searchObject(pStr);
+        }
+    }
 
     virtual char *toStr(int &rLen, char *pBuffer) = 0;
     virtual char *fromStr(char *pBuffer) = 0;
@@ -231,7 +270,7 @@ class cJSONobject : public cJSONbase {
         }
         return -1;
     }
-    int getIndex(std::string s) {
+    int getIndex(std::string &s) {
         for (size_t idx = 0; idx < value.size(); idx++) {
             if (value[idx]->checkName(s)) {
                 return idx;
@@ -271,15 +310,27 @@ class cJSONobject : public cJSONbase {
     }
 
     cJSONbase *getValue(const char *s) {
-        return getObj(getIndex(s))->getValue();
+        cJSONobj *pO = getObj(getIndex(s));
+        return pO ? pO->getValue() : NULL;
+    }
+
+    cJSONbase *getValue(std::string &s) {
+        cJSONobj *pO = getObj(getIndex(s));
+        return pO ? pO->getValue() : NULL;
     }
 
     void setValue(const char *s, cJSONbase *v) {
-        getObj(getIndex(s))->setValue(v);
+        cJSONobj *pO = getObj(getIndex(s));
+        if (pO) {
+            pO->setValue(v);
+        }
     }
 
-    void setValue(std::string s, cJSONbase *v) {
-        getObj(getIndex(s))->setValue(v);
+    void setValue(std::string &s, cJSONbase *v) {
+        cJSONobj *pO = getObj(getIndex(s));
+        if (pO) {
+            pO->setValue(v);
+        }
     }
 
     char *toStr(int &rLen, char *pBuffer);

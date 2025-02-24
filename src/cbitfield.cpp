@@ -21,7 +21,7 @@ under the License.
 
 #include "cbitfield.h"
 
-cBitfield::cBitfield(cJSONbase *pJSON)
+cBitfield::cBitfield(cJSONbase *pJSON, cOutput &rO) : rOutput(rO)
 {
     pFirst = createModule(0, pJSON, 0);
 }
@@ -29,9 +29,32 @@ cBitfield::cBitfield(cJSONbase *pJSON)
 
 cBitfield::~cBitfield()
 {
-
+    rOutput.finish();
 }
 
+void
+cBitfield::printHeader(const char *pPrefix)
+{
+    getFirstModule()->printHeader(&rOutput, pPrefix);
+}
+
+void
+cBitfield::setTime(unsigned long long tim)
+{
+    rOutput.setTime(tim);
+}
+
+void
+cBitfield::flush()
+{
+    rOutput.flush();
+}
+
+void
+cBitfield::finish()
+{
+    rOutput.finish();
+}
 
 cModule *
 cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long modIdx)
@@ -51,31 +74,51 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
                 cJSONscalar *pIdx = dynamic_cast<cJSONscalar *>(pIndex->getValue("<idx>"));
                 int newModIdx = modIdx + (pIdx ? pIdx->getValue() : 0);
                 pMod = new cModule(pNodeObj->getName(), pParent, pMod);
-                entry[newModIdx] = new sModWireInfo(pMod);
+                entry[newModIdx]   = new sModWireInfo(pMod);
+                module2index[pMod] = newModIdx;
                 createModule(pMod, pNodeObj->getValue(), newModIdx);
             }
         } else if (0 == strcmp(pO->getName(), "<ref>")) {
-            cJSONobject *pNode = dynamic_cast<cJSONobject *>(pBase->getParent()->getParent());
             cJSONstring *pRef  = dynamic_cast<cJSONstring *>(pO->getValue());
 
-            if (pRef && pNode) {
-                cJSONobj *pNodeObj = pNode->getObj(pRef->getValue());
-                createModule(pParent, pNodeObj->getValue(), modIdx);
+            if (pRef) {
+                cJSONbase *pNode = pV->search(pRef->getValue());
+                createModule(pParent, pNode, modIdx);
             }
         } else if (0 == strcmp(pO->getName(), "<wire>")) {
             // create Wires for the parent module
             int wireIdx = 0;
+            unsigned long long bitStart  = 0;
+            unsigned long long bitLength = 0;
             cJSONobject *pWireList = dynamic_cast<cJSONobject *>(pO->getValue());
             cJSONobj *pWireObj;
 
             while (0 != (pWireObj = pWireList->getObj(wireIdx++))) {
                 cJSONobject *pWire = dynamic_cast<cJSONobject *>(pWireObj->getValue());
                 cWire *pW;
-                int start = dynamic_cast<cJSONscalar *>(pWire->getValue("start"))->getValue();
-                int end   = dynamic_cast<cJSONscalar *>(pWire->getValue("end"))->getValue();
-                pW = new cWire(eWT_BIT, end - start + 1, pWireObj->getName());
+                cJSONscalar *pStart = dynamic_cast<cJSONscalar *>(pWire->getValue("start"));
+                cJSONscalar *pLen = dynamic_cast<cJSONscalar *>(pWire->getValue("len"));
+                cJSONscalar *pEnd = dynamic_cast<cJSONscalar *>(pWire->getValue("end"));
+
+                bitStart = pStart ? pStart->getValue() : bitStart;
+
+                if (pLen) {
+                    if (pEnd) {
+                        // later error handling
+                    }
+                    bitLength = pLen->getValue();
+                } else if (pEnd) {
+                    unsigned long long bitEnd = pEnd->getValue();
+                    if (bitEnd < bitStart) {
+                        // later error 
+                    }
+                    bitLength = bitEnd - bitStart + 1;
+                }
+
+                pW = new cWire(eWT_BIT, bitLength, pWireObj->getName());
                 pParent->addWire(pW);
-                entry[modIdx]->wires[start] = pW;
+                entry[modIdx]->wires[bitStart] = pW;
+                bitStart += bitLength;
             }
 
         } else {

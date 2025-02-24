@@ -21,6 +21,56 @@ under the License.
 
 #include "cjson.h"
 
+
+cJSONbase *cJSONbase::searchArray(const char *pStr)
+{
+    cJSONarray *pArr = dynamic_cast<cJSONarray *>(this);
+
+    if (pArr) {
+        char *pEnd = 0;
+        int idx = strtol(pStr, &pEnd, 0);
+
+        if (pEnd && *pEnd == ']') {
+            cJSONbase *pRet = pArr->getValue(idx);
+
+            if (pRet) {
+                switch (pEnd[1]) {
+                case '/': return pRet->search(pEnd + 2);
+                case 0  : return pRet;
+                default: return 0;
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
+cJSONbase *cJSONbase::searchObject(const char *pStr)
+{
+    cJSONobject *pObj = dynamic_cast<cJSONobject *>(this);
+
+    if (pObj) {
+        char aBuffer[1024];
+        char *pName = aBuffer;
+
+        while (*pStr && *pStr != '/' && *pStr != '[' && pName != (aBuffer + sizeof(aBuffer) - 1) ) {
+            *pName++ = *pStr++;
+        }
+        *pName = 0;
+
+        cJSONbase *pRet = pObj->getValue(aBuffer);
+        if (pRet) {
+            switch(*pStr) {
+            case '/': return pRet->search(pStr + 1);
+            case '[': return pRet->search(pStr);
+            case 0: return pRet;
+            default: return 0;
+            }
+        }
+    }
+    return 0;
+}
+
 cJSONbase *
 cJSONbase::generate(cJSONbase *pP, FILE *pIn)
 {

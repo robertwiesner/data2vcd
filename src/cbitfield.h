@@ -27,21 +27,42 @@ under the License.
 #include "cjson.h"
 #include "cmodule.h"
 #include "cwire.h"
+#include <string>
+#include "coutput.h"
 
 class cBitfield {
+    cOutput &rOutput;
     cModule *pFirst;
     struct sModWireInfo {
-        cModule *pMod;
-        std::map<int, cWire *>wires;
-        sModWireInfo(cModule *pM) { pMod = pM; }
+      cModule *pMod;
+      std::map<int, cWire *>wires;
+      sModWireInfo(cModule *pM) { pMod = pM; }
     };
     std::map<unsigned long long, sModWireInfo *>entry;
+    std::map<cModule *, unsigned long long>module2index;
     cModule *createModule(cModule *pParent, cJSONbase *, unsigned long long);
     public:
-    cBitfield(cJSONbase *pJSON);
+    cBitfield(cJSONbase *pJSON, cOutput &rO);
     ~cBitfield();
-    void updateValue(unsigned long long id, int size, const char *pPtr);
+    void printHeader(const char *pPrefix);
+    void setTime(unsigned long long);
+    void updateValue(unsigned long long id, int bitSize, const char *pPtr);
+
+    void updateValue(cModule *pMod, int bitSize, const char *pPtr) {
+      std::map<cModule *, unsigned long long>::iterator it = module2index.find(pMod);
+      if (it != module2index.end()) {
+        updateValue(it->second, bitSize, pPtr);
+      }
+    }
+
+    void updateValue(const char *pName, int bitSize, const char *pPtr) {
+      cModule *pMod = pFirst->searchModule(pName);
+      updateValue(pMod, bitSize, pPtr);
+    }
     cModule *getFirstModule() { return pFirst; }
+
+    void flush();
+    void finish();
 };
 
 #endif

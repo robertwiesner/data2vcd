@@ -12,4 +12,4 @@ libdata2vcd.so: $(OBJ)
 
 clean:
 	-rm $(OBJ)
-	-rm libdata2vcd.so
+	-rm data2vcd.a

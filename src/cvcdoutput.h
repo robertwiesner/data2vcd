@@ -26,21 +26,41 @@ under the License.
 #include "coutput.h"
 
 class cVCDOutput : public cOutput {
+    static const int maxRange = 127 - 33;
     size_t wireCount;
     size_t wireCountMax;
+    int wireCountChar; 
+    long   firstTimeOff;
+    long long lastTime; 
+
     const char *shortWireGenerator(char *pBuffer) {
         *--pBuffer = 0;
         size_t val = wireCount;
+
+        if (wireCountChar == 0) {
+            size_t cnt = wireCountMax;
+
+            while (cnt) {
+                cnt = cnt / maxRange;
+                wireCountChar ++;
+            }
+            wireCountChar = wireCountChar ? wireCountChar : 1;
+        }
+        int charCnt = wireCountChar;
+        
         do {
-            *--pBuffer = 33 + val % (127 - 33);
-            val /= (127 - 33);
-        } while (val != 0);
+            *--pBuffer = 33 + val % maxRange;
+            val /= maxRange;
+        } while (--charCnt);
         wireCount++;
         return pBuffer;
     }
     public:
     cVCDOutput(FILE *pO) : cOutput(pO) {
-        wireCount = 0;
+        wireCount     = 0;
+        wireCountMax  = 0;
+        firstTimeOff  = 0;
+        wireCountChar = 0;
     }
 
     virtual ~cVCDOutput();

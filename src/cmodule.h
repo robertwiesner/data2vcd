@@ -41,8 +41,12 @@ class cModule {
         depth = parent ? parent->depth + 1: 0;
         name = pName;
         pParent = parent;
-        if (parent && parent->pChildren == NULL) {
-            parent->pChildren = this;
+        pChildren = NULL;
+        if (parent) {
+            if (parent->pChildren == NULL) {
+                parent->pChildren = this;
+            }
+        } else {
         }
         if (prev) {
             while (prev->pNext) {
@@ -73,13 +77,41 @@ class cModule {
     size_t getWireCount() {
         size_t ret = 0;
         for (cModule *p = getFirstModule(); p; p = p->pNext) {
-            ret += p->pChildren->getWireCount();
+            if (p->pChildren) {
+                ret += p->pChildren->getWireCount();
+            }
             ret += p->wires.size();
         }
         return ret;
     }
 
     void printHeader(cOutput *pO, std::string prefix);
-};
 
+    cModule *searchModule(const char *pPath) {
+        const char *pSlash = strchr(pPath, '/');
+        int len = pSlash ? pSlash - pPath : strlen(pPath);
+        cModule *pRet = NULL;
+        if (pPath == pSlash) {
+            pRet = this;
+            while (pRet && pRet->pParent) {
+                pRet = pRet->pParent;
+            }
+        } else if (len == 2 && pPath[0] == '.' && pPath[1] == '.') {
+            pRet = pParent ? pParent : this;
+        } else if (len == 1 && pPath[0] == '.') {
+            pRet = this;
+        } else {
+            pRet = getFirstModule();
+            while (pRet && strncmp(pRet->getName(), pPath, len)) {
+                pRet = pRet->pNext;
+            }
+        }
+        if (pRet && pPath[len] == '/') {
+            pRet = pRet->searchModule(pPath + len + 1);
+        }
+
+        return pRet;
+    }
+};
+    
 #endif

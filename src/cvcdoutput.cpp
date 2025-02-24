@@ -41,6 +41,7 @@ void cVCDOutput::headerStart()
 
     fprintf(pOut, "$timescale 1ps $end\n");
 }
+
 void cVCDOutput::headerSetStartTime(long long time)
 {
     fprintf(pOut, "Start time: %lld", time);
@@ -78,6 +79,8 @@ void cVCDOutput::headerEnd()
 {
     // over all wires generate the short names
     fprintf(pOut, "$enddefinitions $end\n");
+    firstTimeOff = ftell(pOut);
+    fprintf(pOut, "#0                    \n");
     fprintf(pOut, "$dumpvars\n");
 
     for (std::vector<sData *>::iterator it = items.begin(); it != items.end(); it++) {
@@ -96,9 +99,6 @@ void cVCDOutput::headerEnd()
                 *pPtr++ = ' ';
             } else {
                 *pPtr++ = 'x';
-                if (pSN[1]) {
-                    *pPtr++ = ' ';
-                }
             }
 
             while (*pSN) {
@@ -113,6 +113,15 @@ void cVCDOutput::headerEnd()
 void cVCDOutput::setTime(long long time)
 {
     flush();
+    if (0 < firstTimeOff) {
+        long currOff  = ftell(pOut);
+        if (5 < time && 0 == fseek(pOut, firstTimeOff, SEEK_SET)) {
+            fprintf(pOut, "#%lld", time - 5);
+            fseek(pOut, currOff, SEEK_SET);
+        }
+        firstTimeOff = 0;
+    }
+    lastTime = time;
     fprintf(pOut, "#%lld\n", time);
 }
 
@@ -129,16 +138,12 @@ cVCDOutput::getStringValue(cWire *pW)
     if (1 < bitLen) {
         *pPtr++ = 'b';
         for (size_t idx = bitLen; 0 < idx--; ) {
-            *pPtr++ = pVal[idx / 8] & (1 << (idx & 8)) ? one : zero;
+            *pPtr++ = pVal[idx / 8] & (1 << (idx & 7)) ? one : zero;
         }
         *pPtr++ = ' ';
     } else {
         *pPtr++ = pVal[0] & 1 ? one : zero;
-        if (pSN[1]) {
-            *pPtr++ = ' ';
-        }
     }
-
 
     while (*pSN) {
         *pPtr++ = *pSN++;
@@ -155,6 +160,7 @@ void cVCDOutput::print(cWire *pW)
 
 void cVCDOutput::finish()
 {
+    fprintf(pOut, "#%lld\n", lastTime+1);
     fprintf(pOut, "DONE!!!\n");
 }
 

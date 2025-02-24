@@ -1,18 +1,49 @@
 
 {
 	"ELA600" : {
-		"ELA600_BF" : {
+		"ELA600_WR" : {
 			"<wire>" : {
-				"valid" : { "end" : 0, "start" : 0 },
-				"write" : { "end" : 1, "start" : 1 },
-				"addr"  : { "end" : 90, "start" : 32 }
+				"awvalid"      : { "len" :  1 },
+				"awready"      : { "len" :  1 },
+				"awid"         : { "len" :  7 },
+				"awaddr"       : { "len" : 48 },
+				"awregion"     : { "len" :  4 },
+				"awlen"        : { "len" :  8 },
+				"awsize"       : { "len" :  3 },
+				"awburst"      : { "len" :  2 },
+				"awlock"       : { "len" :  1 },
+				"awcache"      : { "len" :  4 },
+				"awprot"       : { "len" :  3 } ,
+				"awnse"        : { "len" :  1 },
+				"awqos"        : { "len" :  4 },
+				"awuser"       : { "len" :  4 },
+				"awdomain"     : { "len" :  2 },
+				"awsnoop"      : { "len" :  4 },
+				"awstashnid"   : { "len" : 11 },
+				"awstashniden" : { "len" :  1 },
+				"awstashpid"   : { "len" :  5 },
+				"awstashpiden" : { "len" :  1 },
+				"awtrace"      : { "len" :  1 },
+				"awloop"       : { "len" :  4 },
+				"awmmuvalid"   : { "len" :  1 },
+				"awmmusecid"   : { "len" :  4 },
+				"awmmusid"     : { "len" :  4 }
+			}
+		},
+		"ELA600_RD" : {
+			"<wire>" : {
+				"arraw"      : { "len" :  128 }
 			}
 		},
 		"<node>" : {
-			"CH[0]" : { "<ref>" : "ELA600_BF", "<idx>" : 0},
-			"CH[1]" : { "<ref>" : "ELA600_BF", "<idx>" : 1},
-			"CH[2]" : { "<ref>" : "ELA600_BF", "<idx>" : 2},
-			"CH[3]" : { "<ref>" : "ELA600_BF", "<idx>" : 3}
+			"TRACE[0]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x00},
+			"TRACE[1]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x01},
+			"TRACE[2]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x02},
+			"TRACE[3]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x03},
+			"TRACE[4]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x04},
+			"TRACE[5]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x05},
+			"TRACE[6]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x06},
+			"TRACE[7]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x07}
 		}
 	},
 
@@ -20,10 +51,10 @@
 		"<wire>" : { "CLOCK" : {"end" : 0, "start" : 0} }
 	},
 	"<node>" : {
-		"CLK" : { "<ref>" : "CLOCK", "<idx>" : 0 },
-		"ELA0" : { "<ref>" : "ELA600", "<idx>" : 0x1000 },
-		"ELA1" : { "<ref>" : "ELA600", "<idx>" : 0x1100 },
-		"ELA2" : { "<ref>" : "ELA600", "<idx>" : 0x1200 },
-		"ELA3" : { "<ref>" : "ELA600", "<idx>" : 0x1300 }
+		"CLK" : { "<ref>" : "/CLOCK", "<idx>" : 0 },
+		"ELA0" : { "<ref>" : "/ELA600", "<idx>" : 0x1000 },
+		"ELA1" : { "<ref>" : "/ELA600", "<idx>" : 0x1100 },
+		"ELA2" : { "<ref>" : "/ELA600", "<idx>" : 0x1200 },
+		"ELA3" : { "<ref>" : "/ELA600", "<idx>" : 0x1300 }
 	}
 }
