@@ -22,7 +22,8 @@ under the License.
 #include "cjson.h"
 
 
-cJSONbase *cJSONbase::searchArray(const char *pStr)
+cJSONbase *
+cJSONbase::searchArray(const char *pStr)
 {
     cJSONarray *pArr = dynamic_cast<cJSONarray *>(this);
 
@@ -45,7 +46,8 @@ cJSONbase *cJSONbase::searchArray(const char *pStr)
     return NULL;
 }
 
-cJSONbase *cJSONbase::searchObject(const char *pStr)
+cJSONbase *
+cJSONbase::searchObject(const char *pStr)
 {
     cJSONobject *pObj = dynamic_cast<cJSONobject *>(this);
 
@@ -53,10 +55,7 @@ cJSONbase *cJSONbase::searchObject(const char *pStr)
         char aBuffer[1024];
         char *pName = aBuffer;
 
-        while (*pStr && *pStr != '/' && *pStr != '[' && pName != (aBuffer + sizeof(aBuffer) - 1) ) {
-            *pName++ = *pStr++;
-        }
-        *pName = 0;
+        pStr = getName(pStr, aBuffer, aBuffer + sizeof(aBuffer));
 
         cJSONbase *pRet = pObj->getValue(aBuffer);
         if (pRet) {
@@ -69,6 +68,118 @@ cJSONbase *cJSONbase::searchObject(const char *pStr)
         }
     }
     return 0;
+}
+
+// Return the last object and create path as needed
+// Pathe containing .. or . are not supported
+// if the VAR is a NULL pointer, the first created objects is stored there.
+cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
+{
+    cJSONbase *pRet = NULL;
+
+    if (pStr[0] == '/') {
+        pRet = getParent();
+        if (pRet != NULL) {
+            return pRet->searchOrGenerate(pStr);
+        }
+        // we are at the top level now
+        pStr++;
+    }
+
+    pRet = this;
+    while (*pStr) {
+        if (pStr[0] == '[') {
+            char *pEnd = 0;
+            cJSONarray *pArr = dynamic_cast<cJSONarray*>(pRet);
+            int idx = strtol(pStr+1, &pEnd, 0);
+            pEnd = skipWS(pEnd);
+
+            if (pArr == 0) {
+                return 0;
+            }
+
+            if (*pEnd == ']') {
+                for (int i = pArr->getSize(); i <= idx; i++) {
+                    pArr->addValue(new cJSONnone(pArr));
+                }
+                pEnd = skipWS(pEnd+1);
+                switch (*pEnd) {
+                case '[': { // Followed by another array
+                    cJSONarray *pNext = dynamic_cast<cJSONarray *>(pArr->getValue(idx));
+                    if (pNext == 0) {
+                        pNext = new cJSONarray(pArr);
+                        pArr->setValue(idx, pNext);
+                    }
+                    pStr = pEnd;
+                    pRet = pNext;
+                } break;
+                case '/': {
+                    cJSONobject *pNext = dynamic_cast<cJSONobject *>(pArr->getValue(idx));
+                    if (pNext == 0) {
+                        pNext = new cJSONobject(pArr);
+                        pArr->setValue(idx, pNext);
+                    }
+                    pRet = pNext;
+                    pStr = pEnd + 1;
+                    break;
+                }
+
+                case 0:
+                    return pArr;
+                }
+            }
+        } else if (pStr[0]) {
+            // this must be an object
+            cJSONobject *pObj = dynamic_cast<cJSONobject*>(pRet);
+            char aBuffer[1024];
+
+            pStr = getName(pStr, aBuffer, aBuffer + sizeof(aBuffer)+1);
+
+            if (pObj == NULL) {
+                return NULL;
+            }
+
+            cJSONbase *pFound = pObj->getValue(aBuffer);
+
+            if (pFound == NULL) {
+                switch (*pStr) {
+                case 0:
+                    pObj->setValue(aBuffer, new cJSONnone(pObj), true);
+                    pRet = pObj;
+                    break;
+                case '[':
+                    pRet = new cJSONarray(pObj);
+                    pObj->setValue(aBuffer, pRet, true);
+                    break;
+                case '/':
+                    pRet = new cJSONobject(pObj);
+                    pObj->setValue(aBuffer, pRet, true);
+                    pStr++;
+                    break;
+                }
+            } else {
+                switch (*pStr) {
+                case 0:
+                    pRet = pFound;
+                    break;
+                case '[':
+                    pRet = dynamic_cast<cJSONarray*>(pFound);
+                    if (pRet == 0) {
+                        return NULL;
+                    }
+                    break;
+                case '/':
+                    pRet = dynamic_cast<cJSONobject*>(pFound);
+                    if (pRet == 0) {
+                        return NULL;
+                    }
+                    pStr++;
+                    break;
+                }
+            }
+        }
+    }
+    return pRet;
 }
 
 cJSONbase *
@@ -175,7 +286,7 @@ cJSONbase::generate(cJSONbase *pP, char *&prStart)
 
 
 
-char *cJSONbool::toStr(int &rLen, char *pBuffer)
+char *cJSONbool::toStr(int &rLen, char *pBuffer, int deep)
 {
     if (value) {
         if (4 < rLen) {
@@ -193,7 +304,9 @@ char *cJSONbool::toStr(int &rLen, char *pBuffer)
 
     return pBuffer;
 }
-char *cJSONbool::fromStr(char *pBuffer)
+
+char *
+cJSONbool::fromStr(char *pBuffer)
 {
     if (0 == strncmp(pBuffer, "true", 4)) {
         value = true;
@@ -205,11 +318,12 @@ char *cJSONbool::fromStr(char *pBuffer)
     return pBuffer;
 }
 
-char *cJSONscalar::toStr(int &rLen, char *pBuffer)
+char *
+cJSONscalar::toStr(int &rLen, char *pBuffer, int deep)
 {
     char aBuffer[64];
-    sprintf(aBuffer, pFmt, value);
-    int len = strlen(aBuffer);
+    snprintf(aBuffer, sizeof(aBuffer) - 1, pFmt, value);
+    int len = (int) strlen(aBuffer);
 
     if (len < rLen) {
         strcpy(pBuffer, aBuffer);
@@ -219,7 +333,9 @@ char *cJSONscalar::toStr(int &rLen, char *pBuffer)
 
     return pBuffer;
 }
-char *cJSONscalar::fromStr(char *pBuffer)
+
+char *
+cJSONscalar::fromStr(char *pBuffer)
 {
     bool neg = false;
     if (*pBuffer == '-') {
@@ -230,16 +346,17 @@ char *cJSONscalar::fromStr(char *pBuffer)
     }
     value = strtoull(pBuffer, &pBuffer, 0);
     if (neg) {
-        value = -value;
+        value = 1 + (~value);
     }
     return pBuffer;
 }
 
-char *cJSONfloat::toStr(int &rLen, char *pBuffer)
+char *
+cJSONfloat::toStr(int &rLen, char *pBuffer, int deep)
 {
     char aBuffer[64];
-    sprintf(aBuffer, pFmt, value);
-    int len = strlen(aBuffer);
+    snprintf(aBuffer, sizeof(aBuffer) - 1, pFmt, value);
+    int len = (int) strlen(aBuffer);
 
     if (len < rLen) {
         strcpy(pBuffer, aBuffer);
@@ -249,16 +366,19 @@ char *cJSONfloat::toStr(int &rLen, char *pBuffer)
 
     return pBuffer;
 }
-char *cJSONfloat::fromStr(char *pBuffer)
+
+char *
+cJSONfloat::fromStr(char *pBuffer)
 {
 
     value = strtod(pBuffer, &pBuffer);
     return pBuffer;
 }
 
-char *cJSONstring::toStr(int &rLen, char *pBuffer)
+char *
+cJSONstring::toStr(int &rLen, char *pBuffer, int deep)
 {
-    int len = strlen(value) + (withTripple ? 6 : 2);
+    int len = (int) (strlen(value) + (withTripple ? 6 : 2));
 
     if (len < rLen) {
         *pBuffer++ = '"';
@@ -281,7 +401,8 @@ char *cJSONstring::toStr(int &rLen, char *pBuffer)
     return pBuffer;
 }
 
-char *cJSONstring::fromStr(char *pBuffer)
+char *
+cJSONstring::fromStr(char *pBuffer)
 {
     withTripple = pBuffer[0] == '"' && pBuffer[1] == '"' && pBuffer[2] == '"';
     char *pB = pBuffer + (withTripple ? 3 : 1);
@@ -308,27 +429,25 @@ char *cJSONstring::fromStr(char *pBuffer)
     return pB;
 }
 
-char *cJSONarray::toStr(int &rLen, char *pBuffer)
+char *
+cJSONarray::toStr(int &rLen, char *pBuffer, int deep)
 {
-    char sep = '[';
+    deep ++;
+
+    pBuffer = addDeepStringFirst(rLen, pBuffer, deep, '[');
 
     for (size_t idx = 0; idx < value.size(); idx ++) {
-        if (1 < rLen) { *pBuffer++ = sep; }
-        sep = ',';
-        rLen -= 1;
-        pBuffer = value[idx]->toStr(rLen, pBuffer);
+        if (idx) {
+            pBuffer = addDeepStringFirst(rLen, pBuffer, deep, ',');
+        }
+        pBuffer = value[idx]->toStr(rLen, pBuffer, deep);
     }
 
-    if (2 < rLen) {
-        *pBuffer++ = ']'; 
-        *pBuffer = 0;
-    } else { pBuffer = 0; }
-
-    rLen -= 1;
-
-    return pBuffer;
+    return addDeepStringLast(rLen, pBuffer, deep - 1, ']');
 }
-char *cJSONarray::fromStr(char *pBuffer)
+
+char *
+cJSONarray::fromStr(char *pBuffer)
 {
     char sep = '[';
 
@@ -337,42 +456,46 @@ char *cJSONarray::fromStr(char *pBuffer)
         cJSONbase *pObj = generate(this, pBuffer);
         if (pObj == NULL) return NULL;
         value.push_back(pObj);
+        pBuffer = skipWS(pBuffer);
         sep = ',';
     }
-    return pBuffer;
+    return pBuffer + (*pBuffer ? 1 : 0);
 }
 
-
-char *cJSONobject::toStr(int &rLen, char *pBuffer)
+char *
+cJSONobject::toStr(int &rLen, char *pBuffer, int deep)
 {
-    char sep = '{';
+    deep ++;
+    pBuffer = addDeepStringFirst(rLen, pBuffer, deep, '[');
 
     for (size_t idx = 0; idx < value.size(); idx ++) {
         cJSONobj *pO = value[idx];
-        int len = strlen(pO->getName());
-        if (1 < rLen) { *pBuffer++ = sep; }
+        int len = (int) strlen(pO->getName());
 
-        sep = ',';
-        rLen -= 1 + 3 + len;
+        if (idx) { 
+            pBuffer = addDeepStringFirst(rLen, pBuffer, deep, ',');
+        }
 
-        if (3 + len < rLen) {
+        rLen -= 5 + len;
+
+        if (0 < rLen) {
             *pBuffer++ = '"';
             strcpy(pBuffer, pO->getName());
             pBuffer += len;
             *pBuffer++ = '"';
+            *pBuffer++ = ' ';
             *pBuffer++ = ':';
+            *pBuffer++ = ' ';
         }
-        pBuffer = pO->getValue()->toStr(rLen, pBuffer);
-    }
-    if (2 < rLen) {
-        *pBuffer++ = '}';
-        *pBuffer = 0;
-    }
-    rLen -= 1;
 
-    return pBuffer;
+        pBuffer = pO->getValue()->toStr(rLen, pBuffer, deep);
+    }
+
+    return addDeepStringLast(rLen, pBuffer, deep - 1, '}');
 }
-char *cJSONobject::fromStr(char *pBuffer)
+
+char *
+cJSONobject::fromStr(char *pBuffer)
 {
     char sep = '{';
 
@@ -388,13 +511,7 @@ char *cJSONobject::fromStr(char *pBuffer)
             pBuffer ++;
             cJSONbase *pObj = generate(this, pBuffer);
             if (pObj != NULL) {
-                int idx = getIndex(name);
-                if (idx < 0) {
-                    cJSONobj *pO = new cJSONobj(name, pObj);
-                    value.push_back(pO);
-                } else {
-                    value[idx]->setValue(pObj);
-                }
+                setValue(name, pObj, true);
             } else {
                 return NULL;
             }
@@ -402,6 +519,7 @@ char *cJSONobject::fromStr(char *pBuffer)
             return NULL;
         }
         sep = ',';
+        pBuffer = skipWS(pBuffer);
     }
 
     if (*pBuffer != '}') {

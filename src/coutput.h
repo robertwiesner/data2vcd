@@ -42,13 +42,15 @@ class cOutput {
     char aBuffer[1024];
     FILE *pOut; 
     public:
-    cOutput(FILE *pO) {
+    cOutput(FILE *pO = NULL) {
         pOut = pO;
         pLastModule = NULL;
     }
 
     virtual ~cOutput();
 
+    void setOutputFile(FILE *pO) { pOut = pO; }
+    
     virtual const char *getStringValue(cWire *);
     virtual void headerStart();
     virtual void headerSetStartTime(long long);

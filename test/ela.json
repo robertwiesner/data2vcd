@@ -36,14 +36,14 @@
 			}
 		},
 		"<node>" : {
-			"TRACE[0]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x00},
-			"TRACE[1]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x01},
-			"TRACE[2]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x02},
-			"TRACE[3]" : { "<ref>" : "../../ELA600_WR", "<idx>" : 0x03},
-			"TRACE[4]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x04},
-			"TRACE[5]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x05},
-			"TRACE[6]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x06},
-			"TRACE[7]" : { "<ref>" : "../../ELA600_RD", "<idx>" : 0x07}
+			"TRACE[0]" : { "<ref>" : "../ELA600_WR", "<idx>" : 0x00},
+			"TRACE[1]" : { "<ref>" : "../ELA600_WR", "<idx>" : 0x01},
+			"TRACE[2]" : { "<ref>" : "../ELA600_WR", "<idx>" : 0x02},
+			"TRACE[3]" : { "<ref>" : "../ELA600_WR", "<idx>" : 0x03},
+			"TRACE[4]" : { "<ref>" : "../ELA600_RD", "<idx>" : 0x04},
+			"TRACE[5]" : { "<ref>" : "../ELA600_RD", "<idx>" : 0x05},
+			"TRACE[6]" : { "<ref>" : "../ELA600_RD", "<idx>" : 0x06},
+			"TRACE[7]" : { "<ref>" : "../ELA600_RD", "<idx>" : 0x07}
 		}
 	},
 

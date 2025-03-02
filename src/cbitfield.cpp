@@ -59,98 +59,102 @@ cBitfield::finish()
 cModule *
 cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long modIdx)
 {
-    int idx = 0;
-    cModule     *pMod = 0;
-    cJSONobj    *pO;
+    cModule     *pRet = pParent;
     cJSONobject *pV = dynamic_cast<cJSONobject *>(pBase);
 
-    while (0 != (pO = pV->getObj(idx++))) {
-        if (0 == strcmp(pO->getName(), "<node>")) {
-            cJSONobject *pNode = dynamic_cast<cJSONobject *>(pO->getValue());
-            cJSONobj *pNodeObj;
-            int nodeIdx = 0;
-            while (0 != (pNodeObj = pNode->getObj(nodeIdx++))) {
-                cJSONobject *pIndex = dynamic_cast<cJSONobject *>(pNodeObj->getValue());
-                cJSONscalar *pIdx = dynamic_cast<cJSONscalar *>(pIndex->getValue("<idx>"));
-                int newModIdx = modIdx + (pIdx ? pIdx->getValue() : 0);
-                pMod = new cModule(pNodeObj->getName(), pParent, pMod);
-                entry[newModIdx]   = new sModWireInfo(pMod);
-                module2index[pMod] = newModIdx;
-                createModule(pMod, pNodeObj->getValue(), newModIdx);
+    if (pV == 0) {
+        return 0;
+    }
+
+    cJSONobject *pNodeList = dynamic_cast<cJSONobject *>(pV->search("<node>"));
+
+    if (pNodeList) {
+        // create the reference modules
+        cModule     *pMod = 0;
+
+        for (int nodeIdx = 0; nodeIdx < pNodeList->getSize(); nodeIdx++) {
+            cJSONobject *pObj = dynamic_cast<cJSONobject *>(pNodeList->getValue(nodeIdx));
+            cJSONscalar *pIdx = dynamic_cast<cJSONscalar *>(pObj->getValue("<idx>"));
+            cJSONstring *pRef = dynamic_cast<cJSONstring *>(pObj->getValue("<ref>"));
+
+            if (pObj == 0 || pIdx ==0 || pRef == 0) {
+                return NULL;
             }
-        } else if (0 == strcmp(pO->getName(), "<ref>")) {
-            cJSONstring *pRef  = dynamic_cast<cJSONstring *>(pO->getValue());
 
-            if (pRef) {
-                cJSONbase *pNode = pV->search(pRef->getValue());
-                createModule(pParent, pNode, modIdx);
-            }
-        } else if (0 == strcmp(pO->getName(), "<wire>")) {
-            // create Wires for the parent module
-            int wireIdx = 0;
-            unsigned long long bitStart  = 0;
-            unsigned long long bitLength = 0;
-            cJSONobject *pWireList = dynamic_cast<cJSONobject *>(pO->getValue());
-            cJSONobj *pWireObj;
+            size_t newModIdx = modIdx + pIdx->getValue();
 
-            while (0 != (pWireObj = pWireList->getObj(wireIdx++))) {
-                cJSONobject *pWire = dynamic_cast<cJSONobject *>(pWireObj->getValue());
-                cWire *pW;
-                cJSONscalar *pStart = dynamic_cast<cJSONscalar *>(pWire->getValue("start"));
-                cJSONscalar *pLen = dynamic_cast<cJSONscalar *>(pWire->getValue("len"));
-                cJSONscalar *pEnd = dynamic_cast<cJSONscalar *>(pWire->getValue("end"));
+            pMod = new cModule(pNodeList->getName(nodeIdx), pParent, pMod);
+            entry[newModIdx]   = new sModWireInfo(pMod);
+            module2index[pMod] = newModIdx;
+            createModule(pMod, pNodeList->search(pRef->getValue()), newModIdx);
+        }
 
-                bitStart = pStart ? pStart->getValue() : bitStart;
+        pRet = pMod;
+    }
 
-                if (pLen) {
-                    if (pEnd) {
-                        // later error handling
-                    }
-                    bitLength = pLen->getValue();
-                } else if (pEnd) {
-                    unsigned long long bitEnd = pEnd->getValue();
-                    if (bitEnd < bitStart) {
-                        // later error 
-                    }
-                    bitLength = bitEnd - bitStart + 1;
+    cJSONobject *pWireList = dynamic_cast<cJSONobject *>(pV->search("<wire>"));
+
+    if (pWireList) {
+        // create Wires for the parent module
+        unsigned long long bitStart  = 0;
+        unsigned long long bitLength = 0;
+
+        for (int wireIdx = 0; wireIdx < pWireList->getSize(); wireIdx++) {
+            cJSONobject *pWire = dynamic_cast<cJSONobject *>(pWireList->getValue(wireIdx));
+            cWire *pW;
+            cJSONscalar *pStart = dynamic_cast<cJSONscalar *>(pWire->getValue("start"));
+            cJSONscalar *pLen = dynamic_cast<cJSONscalar *>(pWire->getValue("len"));
+            cJSONscalar *pEnd = dynamic_cast<cJSONscalar *>(pWire->getValue("end"));
+
+            bitStart = pStart ? pStart->getValue() : bitStart;
+
+            if (pLen) {
+                if (pEnd) {
+                    // later error handling
                 }
-
-                pW = new cWire(eWT_BIT, bitLength, pWireObj->getName());
-                pParent->addWire(pW);
-                entry[modIdx]->wires[bitStart] = pW;
-                bitStart += bitLength;
+                bitLength = pLen->getValue();
+            } else if (pEnd) {
+                unsigned long long bitEnd = pEnd->getValue();
+                if (bitEnd < bitStart) {
+                    // later error 
+                }
+                bitLength = bitEnd - bitStart + 1;
             }
 
-        } else {
-            // skip the none special entries
+            pW = new cWire(eWT_BIT, bitLength, pWireList->getName(wireIdx));
+            pParent->addWire(pW);
+            entry[modIdx]->wires[(int) bitStart] = pW;
+            bitStart += bitLength;
         }
     }
-    return pMod->getFirstModule();
-
+    return pRet->getFirstModule();
 }
 
 void
-cBitfield::updateValue(unsigned long long id, int size, const char *pPtr)
+cBitfield::updateValue(unsigned long long id, int byteSize, const char *pPtr)
 {
     sModWireInfo *pRegMap = entry[id];
     
     if (pRegMap) {
-        unsigned char *pBuffer = new unsigned char[size+1];
+        int bitSize = 8*byteSize;
+        unsigned char *pBuffer = new unsigned char[byteSize+1];
         for (std::map<int, cWire *>::iterator it = pRegMap->wires.begin(); it != pRegMap->wires.end(); it++) {
             int    start = it->first;
             int    bits  = start & 7;
             cWire *pW    = it->second;
-            int    len   = pW->getBits();
+            size_t len   = pW->getBits();
             int    idx   = start / 8;
             int    val   = pPtr[idx++] & 0xff;
             unsigned char *pVal = pBuffer;
 
-            for (int bitCnt = 0; bitCnt < len; bitCnt += 8) {
-                val |= (pPtr[idx++] & 0xff) << 8;
-                *pVal++ = val >> bits;
-                val >>= 8;
+            if (start + len <= bitSize) {
+                for (size_t bitCnt = 0; bitCnt < len; bitCnt += 8) {
+                    val |= (pPtr[idx++] & 0xff) << 8;
+                    *pVal++ = val >> bits;
+                    val >>= 8;
+                }
+                pW->setValue( (len+7) / 8, pBuffer);
             }
-            pW->setValue( (len+7) / 8, pBuffer);
         }
         delete[] pBuffer;
     }

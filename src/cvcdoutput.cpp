@@ -51,7 +51,7 @@ void cVCDOutput::headerModuleStart(cModule *pM, std::string prefix)
 {
     pLastModule = pM;
     items.push_back(new sData(pM, NULL));
-    fprintf(pOut, "$scope module %s $end\n", pM->getName());
+    fprintf(pOut, "$scope module %s $end\n", printableCharOnly(pM->getName()));
 }
 
 void cVCDOutput::headerModuleEnd(cModule *pM)
@@ -72,7 +72,7 @@ void cVCDOutput::headerWire(cWire *pW, std::string prefix)
     }
 
     pW->setShortName(shortWireGenerator(aBuffer + sizeof(aBuffer)));
-    fprintf(pOut, "$var wire %ld %s %s $end\n", pW->getBits(), pW->getShortName(), pW->getName());
+    fprintf(pOut, "$var wire %ld %s %s $end\n", pW->getBits(), pW->getShortName(), printableCharOnly(pW->getName()));
 }
 
 void cVCDOutput::headerEnd()

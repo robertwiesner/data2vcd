@@ -23,6 +23,7 @@ under the License.
 #define CVCDOUTPUT_H
 
 #include <stdio.h>
+#include <string.h>
 #include "coutput.h"
 
 class cVCDOutput : public cOutput {
@@ -32,7 +33,8 @@ class cVCDOutput : public cOutput {
     int wireCountChar; 
     long   firstTimeOff;
     long long lastTime; 
-
+    char *pRenameBuffer;
+    size_t renameBufferSize;
     const char *shortWireGenerator(char *pBuffer) {
         *--pBuffer = 0;
         size_t val = wireCount;
@@ -55,12 +57,40 @@ class cVCDOutput : public cOutput {
         wireCount++;
         return pBuffer;
     }
+
+    const char *printableCharOnly(const char *pStr) {
+        size_t len = strlen(pStr);
+        if (renameBufferSize <= len) {
+            renameBufferSize = (len + 0x1000) & ~0xfff;
+            if (pRenameBuffer) { delete[] pRenameBuffer;}
+            pRenameBuffer = new char[renameBufferSize];
+        }
+        char *pDst = pRenameBuffer;
+        char c;
+        while ((c = *pStr++)) {
+            if ('A' <= c && c <='Z') {
+                *pDst++ = c;
+            } else 
+            if ('a' <= c && c <='z') {
+                *pDst++ = c;
+            } else 
+            if ('0' <= c && c <='9') {
+                *pDst++ = c;
+            } else {
+                *pDst++ = '_';
+            }
+        }
+        *pDst = 0;
+        return pRenameBuffer;
+    }
     public:
     cVCDOutput(FILE *pO) : cOutput(pO) {
         wireCount     = 0;
         wireCountMax  = 0;
         firstTimeOff  = 0;
         wireCountChar = 0;
+        renameBufferSize = 0;
+        pRenameBuffer = 0;
     }
 
     virtual ~cVCDOutput();

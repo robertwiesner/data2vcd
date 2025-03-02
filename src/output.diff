@@ -1,0 +1,866 @@
+diff --git a/src/cbitfield.cpp b/src/cbitfield.cpp
+index 5be4aa4..345d54a 100644
+--- a/src/cbitfield.cpp
++++ b/src/cbitfield.cpp
+@@ -59,42 +59,38 @@ cBitfield::finish()
+ cModule *
+ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long modIdx)
+ {
+-    int idx = 0;
+     cModule     *pMod = 0;
+-    cJSONobj    *pO;
+     cJSONobject *pV = dynamic_cast<cJSONobject *>(pBase);
+ 
+-    while (0 != (pO = pV->getObj(idx++))) {
+-        if (0 == strcmp(pO->getName(), "<node>")) {
+-            cJSONobject *pNode = dynamic_cast<cJSONobject *>(pO->getValue());
+-            cJSONobj *pNodeObj;
++    for (int idx = 0; idx < pV->getSize(); idx ++) {
++        if (0 == strcmp(pV->getName(idx), "<node>")) {
++            cJSONobject *pNode = dynamic_cast<cJSONobject *>(pV->getValue(idx));
+             int nodeIdx = 0;
+-            while (0 != (pNodeObj = pNode->getObj(nodeIdx++))) {
+-                cJSONobject *pIndex = dynamic_cast<cJSONobject *>(pNodeObj->getValue());
++            for (int nodeIdx = 0; nodeIdx < pNode->getSize(); nodeIdx++) {
++                cJSONobject *pIndex = dynamic_cast<cJSONobject *>(pNode->getValue(nodeIdx));
+                 cJSONscalar *pIdx = dynamic_cast<cJSONscalar *>(pIndex->getValue("<idx>"));
+-                int newModIdx = modIdx + (pIdx ? pIdx->getValue() : 0);
+-                pMod = new cModule(pNodeObj->getName(), pParent, pMod);
++                size_t newModIdx = modIdx + (pIdx ? pIdx->getValue() : 0ull);
++                pMod = new cModule(pNode->getName(nodeIdx), pParent, pMod);
+                 entry[newModIdx]   = new sModWireInfo(pMod);
+                 module2index[pMod] = newModIdx;
+-                createModule(pMod, pNodeObj->getValue(), newModIdx);
++                createModule(pMod, pIndex, newModIdx);
+             }
+-        } else if (0 == strcmp(pO->getName(), "<ref>")) {
+-            cJSONstring *pRef  = dynamic_cast<cJSONstring *>(pO->getValue());
++        } else if (0 == strcmp(pV->getName(idx), "<ref>")) {
++            cJSONstring *pRef  = dynamic_cast<cJSONstring *>(pV->getValue(idx));
+ 
+             if (pRef) {
+                 cJSONbase *pNode = pV->search(pRef->getValue());
+                 createModule(pParent, pNode, modIdx);
+             }
+-        } else if (0 == strcmp(pO->getName(), "<wire>")) {
++        } else if (0 == strcmp(pV->getName(idx), "<wire>")) {
+             // create Wires for the parent module
+             int wireIdx = 0;
+             unsigned long long bitStart  = 0;
+             unsigned long long bitLength = 0;
+-            cJSONobject *pWireList = dynamic_cast<cJSONobject *>(pO->getValue());
+-            cJSONobj *pWireObj;
++            cJSONobject *pWireList = dynamic_cast<cJSONobject *>(pV->getValue(idx));
+ 
+-            while (0 != (pWireObj = pWireList->getObj(wireIdx++))) {
+-                cJSONobject *pWire = dynamic_cast<cJSONobject *>(pWireObj->getValue());
++            for (int wireIdx = 0; wireIdx < pWireList->getSize(); wireIdx++) {
++                cJSONobject *pWire = dynamic_cast<cJSONobject *>(pWireList->getValue(idx));
+                 cWire *pW;
+                 cJSONscalar *pStart = dynamic_cast<cJSONscalar *>(pWire->getValue("start"));
+                 cJSONscalar *pLen = dynamic_cast<cJSONscalar *>(pWire->getValue("len"));
+@@ -115,9 +111,9 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
+                     bitLength = bitEnd - bitStart + 1;
+                 }
+ 
+-                pW = new cWire(eWT_BIT, bitLength, pWireObj->getName());
++                pW = new cWire(eWT_BIT, bitLength, pWireList->getName(wireIdx));
+                 pParent->addWire(pW);
+-                entry[modIdx]->wires[bitStart] = pW;
++                entry[modIdx]->wires[(int) bitStart] = pW;
+                 bitStart += bitLength;
+             }
+ 
+@@ -130,27 +126,30 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
+ }
+ 
+ void
+-cBitfield::updateValue(unsigned long long id, int size, const char *pPtr)
++cBitfield::updateValue(unsigned long long id, int byteSize, const char *pPtr)
+ {
+     sModWireInfo *pRegMap = entry[id];
+     
+     if (pRegMap) {
+-        unsigned char *pBuffer = new unsigned char[size+1];
++        int bitSize = 8*byteSize;
++        unsigned char *pBuffer = new unsigned char[byteSize+1];
+         for (std::map<int, cWire *>::iterator it = pRegMap->wires.begin(); it != pRegMap->wires.end(); it++) {
+             int    start = it->first;
+             int    bits  = start & 7;
+             cWire *pW    = it->second;
+-            int    len   = pW->getBits();
++            size_t len   = pW->getBits();
+             int    idx   = start / 8;
+             int    val   = pPtr[idx++] & 0xff;
+             unsigned char *pVal = pBuffer;
+ 
+-            for (int bitCnt = 0; bitCnt < len; bitCnt += 8) {
+-                val |= (pPtr[idx++] & 0xff) << 8;
+-                *pVal++ = val >> bits;
+-                val >>= 8;
++            if (start + len <= bitSize) {
++                for (size_t bitCnt = 0; bitCnt < len; bitCnt += 8) {
++                    val |= (pPtr[idx++] & 0xff) << 8;
++                    *pVal++ = val >> bits;
++                    val >>= 8;
++                }
++                pW->setValue( (len+7) / 8, pBuffer);
+             }
+-            pW->setValue( (len+7) / 8, pBuffer);
+         }
+         delete[] pBuffer;
+     }
+diff --git a/src/cbitfield.h b/src/cbitfield.h
+index 176e095..94db5cf 100644
+--- a/src/cbitfield.h
++++ b/src/cbitfield.h
+@@ -46,18 +46,18 @@ class cBitfield {
+     ~cBitfield();
+     void printHeader(const char *pPrefix);
+     void setTime(unsigned long long);
+-    void updateValue(unsigned long long id, int bitSize, const char *pPtr);
++    void updateValue(unsigned long long id, int byteSize, const char *pPtr);
+ 
+-    void updateValue(cModule *pMod, int bitSize, const char *pPtr) {
++    void updateValue(cModule *pMod, int byteSize, const char *pPtr) {
+       std::map<cModule *, unsigned long long>::iterator it = module2index.find(pMod);
+       if (it != module2index.end()) {
+-        updateValue(it->second, bitSize, pPtr);
++        updateValue(it->second, byteSize, pPtr);
+       }
+     }
+ 
+-    void updateValue(const char *pName, int bitSize, const char *pPtr) {
++    void updateValue(const char *pName, int byteSize, const char *pPtr) {
+       cModule *pMod = pFirst->searchModule(pName);
+-      updateValue(pMod, bitSize, pPtr);
++      updateValue(pMod, byteSize, pPtr);
+     }
+     cModule *getFirstModule() { return pFirst; }
+ 
+diff --git a/src/cjson.cpp b/src/cjson.cpp
+index 68838bc..a6c374b 100644
+--- a/src/cjson.cpp
++++ b/src/cjson.cpp
+@@ -22,7 +22,8 @@ under the License.
+ #include "cjson.h"
+ 
+ 
+-cJSONbase *cJSONbase::searchArray(const char *pStr)
++cJSONbase *
++cJSONbase::searchArray(const char *pStr)
+ {
+     cJSONarray *pArr = dynamic_cast<cJSONarray *>(this);
+ 
+@@ -45,7 +46,8 @@ cJSONbase *cJSONbase::searchArray(const char *pStr)
+     return NULL;
+ }
+ 
+-cJSONbase *cJSONbase::searchObject(const char *pStr)
++cJSONbase *
++cJSONbase::searchObject(const char *pStr)
+ {
+     cJSONobject *pObj = dynamic_cast<cJSONobject *>(this);
+ 
+@@ -53,10 +55,7 @@ cJSONbase *cJSONbase::searchObject(const char *pStr)
+         char aBuffer[1024];
+         char *pName = aBuffer;
+ 
+-        while (*pStr && *pStr != '/' && *pStr != '[' && pName != (aBuffer + sizeof(aBuffer) - 1) ) {
+-            *pName++ = *pStr++;
+-        }
+-        *pName = 0;
++        pStr = getName(pStr, aBuffer, aBuffer + sizeof(aBuffer));
+ 
+         cJSONbase *pRet = pObj->getValue(aBuffer);
+         if (pRet) {
+@@ -71,6 +70,118 @@ cJSONbase *cJSONbase::searchObject(const char *pStr)
+     return 0;
+ }
+ 
++// Return the last object and create path as needed
++// Pathe containing .. or . are not supported
++// if the VAR is a NULL pointer, the first created objects is stored there.
++cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
++{
++    cJSONbase *pRet = NULL;
++
++    if (pStr[0] == '/') {
++        pRet = getParent();
++        if (pRet != NULL) {
++            return pRet->searchOrGenerate(pStr);
++        }
++        // we are at the top level now
++        pStr++;
++    }
++
++    pRet = this;
++    while (*pStr) {
++        if (pStr[0] == '[') {
++            char *pEnd = 0;
++            cJSONarray *pArr = dynamic_cast<cJSONarray*>(pRet);
++            int idx = strtol(pStr+1, &pEnd, 0);
++            pEnd = skipWS(pEnd);
++
++            if (pArr == 0) {
++                return 0;
++            }
++
++            if (*pEnd == ']') {
++                for (int i = pArr->getSize(); i <= idx; i++) {
++                    pArr->addValue(new cJSONnone(pArr));
++                }
++                pEnd = skipWS(pEnd+1);
++                switch (*pEnd) {
++                case '[': { // Followed by another array
++                    cJSONarray *pNext = dynamic_cast<cJSONarray *>(pArr->getValue(idx));
++                    if (pNext == 0) {
++                        pNext = new cJSONarray(pArr);
++                        pArr->setValue(idx, pNext);
++                    }
++                    pStr = pEnd;
++                    pRet = pNext;
++                } break;
++                case '/': {
++                    cJSONobject *pNext = dynamic_cast<cJSONobject *>(pArr->getValue(idx));
++                    if (pNext == 0) {
++                        pNext = new cJSONobject(pArr);
++                        pArr->setValue(idx, pNext);
++                    }
++                    pRet = pNext;
++                    pStr = pEnd + 1;
++                    break;
++                }
++
++                case 0:
++                    return pArr;
++                }
++            }
++        } else if (pStr[0]) {
++            // this must be an object
++            cJSONobject *pObj = dynamic_cast<cJSONobject*>(pRet);
++            char aBuffer[1024];
++
++            pStr = getName(pStr, aBuffer, aBuffer + sizeof(aBuffer)+1);
++
++            if (pObj == NULL) {
++                return NULL;
++            }
++
++            cJSONbase *pFound = pObj->getValue(aBuffer);
++
++            if (pFound == NULL) {
++                switch (*pStr) {
++                case 0:
++                    pObj->setValue(aBuffer, new cJSONnone(pObj), true);
++                    pRet = pObj;
++                    break;
++                case '[':
++                    pRet = new cJSONarray(pObj);
++                    pObj->setValue(aBuffer, pRet, true);
++                    break;
++                case '/':
++                    pRet = new cJSONobject(pObj);
++                    pObj->setValue(aBuffer, pRet, true);
++                    pStr++;
++                    break;
++                }
++            } else {
++                switch (*pStr) {
++                case 0:
++                    pRet = pFound;
++                    break;
++                case '[':
++                    pRet = dynamic_cast<cJSONarray*>(pFound);
++                    if (pRet == 0) {
++                        return NULL;
++                    }
++                    break;
++                case '/':
++                    pRet = dynamic_cast<cJSONobject*>(pFound);
++                    if (pRet == 0) {
++                        return NULL;
++                    }
++                    pStr++;
++                    break;
++                }
++            }
++        }
++    }
++    return pRet;
++}
++
+ cJSONbase *
+ cJSONbase::generate(cJSONbase *pP, FILE *pIn)
+ {
+@@ -175,7 +286,7 @@ cJSONbase::generate(cJSONbase *pP, char *&prStart)
+ 
+ 
+ 
+-char *cJSONbool::toStr(int &rLen, char *pBuffer)
++char *cJSONbool::toStr(int &rLen, char *pBuffer, int deep)
+ {
+     if (value) {
+         if (4 < rLen) {
+@@ -193,7 +304,9 @@ char *cJSONbool::toStr(int &rLen, char *pBuffer)
+ 
+     return pBuffer;
+ }
+-char *cJSONbool::fromStr(char *pBuffer)
++
++char *
++cJSONbool::fromStr(char *pBuffer)
+ {
+     if (0 == strncmp(pBuffer, "true", 4)) {
+         value = true;
+@@ -205,11 +318,12 @@ char *cJSONbool::fromStr(char *pBuffer)
+     return pBuffer;
+ }
+ 
+-char *cJSONscalar::toStr(int &rLen, char *pBuffer)
++char *
++cJSONscalar::toStr(int &rLen, char *pBuffer, int deep)
+ {
+     char aBuffer[64];
+-    sprintf(aBuffer, pFmt, value);
+-    int len = strlen(aBuffer);
++    snprintf(aBuffer, sizeof(aBuffer) - 1, pFmt, value);
++    int len = (int) strlen(aBuffer);
+ 
+     if (len < rLen) {
+         strcpy(pBuffer, aBuffer);
+@@ -219,7 +333,9 @@ char *cJSONscalar::toStr(int &rLen, char *pBuffer)
+ 
+     return pBuffer;
+ }
+-char *cJSONscalar::fromStr(char *pBuffer)
++
++char *
++cJSONscalar::fromStr(char *pBuffer)
+ {
+     bool neg = false;
+     if (*pBuffer == '-') {
+@@ -230,16 +346,17 @@ char *cJSONscalar::fromStr(char *pBuffer)
+     }
+     value = strtoull(pBuffer, &pBuffer, 0);
+     if (neg) {
+-        value = -value;
++        value = 1 + (~value);
+     }
+     return pBuffer;
+ }
+ 
+-char *cJSONfloat::toStr(int &rLen, char *pBuffer)
++char *
++cJSONfloat::toStr(int &rLen, char *pBuffer, int deep)
+ {
+     char aBuffer[64];
+-    sprintf(aBuffer, pFmt, value);
+-    int len = strlen(aBuffer);
++    snprintf(aBuffer, sizeof(aBuffer) - 1, pFmt, value);
++    int len = (int) strlen(aBuffer);
+ 
+     if (len < rLen) {
+         strcpy(pBuffer, aBuffer);
+@@ -249,16 +366,19 @@ char *cJSONfloat::toStr(int &rLen, char *pBuffer)
+ 
+     return pBuffer;
+ }
+-char *cJSONfloat::fromStr(char *pBuffer)
++
++char *
++cJSONfloat::fromStr(char *pBuffer)
+ {
+ 
+     value = strtod(pBuffer, &pBuffer);
+     return pBuffer;
+ }
+ 
+-char *cJSONstring::toStr(int &rLen, char *pBuffer)
++char *
++cJSONstring::toStr(int &rLen, char *pBuffer, int deep)
+ {
+-    int len = strlen(value) + (withTripple ? 6 : 2);
++    int len = (int) (strlen(value) + (withTripple ? 6 : 2));
+ 
+     if (len < rLen) {
+         *pBuffer++ = '"';
+@@ -281,7 +401,8 @@ char *cJSONstring::toStr(int &rLen, char *pBuffer)
+     return pBuffer;
+ }
+ 
+-char *cJSONstring::fromStr(char *pBuffer)
++char *
++cJSONstring::fromStr(char *pBuffer)
+ {
+     withTripple = pBuffer[0] == '"' && pBuffer[1] == '"' && pBuffer[2] == '"';
+     char *pB = pBuffer + (withTripple ? 3 : 1);
+@@ -308,27 +429,25 @@ char *cJSONstring::fromStr(char *pBuffer)
+     return pB;
+ }
+ 
+-char *cJSONarray::toStr(int &rLen, char *pBuffer)
++char *
++cJSONarray::toStr(int &rLen, char *pBuffer, int deep)
+ {
+-    char sep = '[';
++    deep ++;
++
++    pBuffer = addDeepStringFirst(rLen, pBuffer, deep, '[');
+ 
+     for (size_t idx = 0; idx < value.size(); idx ++) {
+-        if (1 < rLen) { *pBuffer++ = sep; }
+-        sep = ',';
+-        rLen -= 1;
+-        pBuffer = value[idx]->toStr(rLen, pBuffer);
++        if (idx) {
++            pBuffer = addDeepStringFirst(rLen, pBuffer, deep, ',');
++        }
++        pBuffer = value[idx]->toStr(rLen, pBuffer, deep);
+     }
+ 
+-    if (2 < rLen) {
+-        *pBuffer++ = ']'; 
+-        *pBuffer = 0;
+-    } else { pBuffer = 0; }
+-
+-    rLen -= 1;
+-
+-    return pBuffer;
++    return addDeepStringLast(rLen, pBuffer, deep - 1, ']');
+ }
+-char *cJSONarray::fromStr(char *pBuffer)
++
++char *
++cJSONarray::fromStr(char *pBuffer)
+ {
+     char sep = '[';
+ 
+@@ -337,42 +456,46 @@ char *cJSONarray::fromStr(char *pBuffer)
+         cJSONbase *pObj = generate(this, pBuffer);
+         if (pObj == NULL) return NULL;
+         value.push_back(pObj);
++        pBuffer = skipWS(pBuffer);
+         sep = ',';
+     }
+-    return pBuffer;
++    return pBuffer + (*pBuffer ? 1 : 0);
+ }
+ 
+-
+-char *cJSONobject::toStr(int &rLen, char *pBuffer)
++char *
++cJSONobject::toStr(int &rLen, char *pBuffer, int deep)
+ {
+-    char sep = '{';
++    deep ++;
++    pBuffer = addDeepStringFirst(rLen, pBuffer, deep, '[');
+ 
+     for (size_t idx = 0; idx < value.size(); idx ++) {
+         cJSONobj *pO = value[idx];
+-        int len = strlen(pO->getName());
+-        if (1 < rLen) { *pBuffer++ = sep; }
++        int len = (int) strlen(pO->getName());
+ 
+-        sep = ',';
+-        rLen -= 1 + 3 + len;
++        if (idx) { 
++            pBuffer = addDeepStringFirst(rLen, pBuffer, deep, ',');
++        }
+ 
+-        if (3 + len < rLen) {
++        rLen -= 5 + len;
++
++        if (0 < rLen) {
+             *pBuffer++ = '"';
+             strcpy(pBuffer, pO->getName());
+             pBuffer += len;
+             *pBuffer++ = '"';
++            *pBuffer++ = ' ';
+             *pBuffer++ = ':';
++            *pBuffer++ = ' ';
+         }
+-        pBuffer = pO->getValue()->toStr(rLen, pBuffer);
+-    }
+-    if (2 < rLen) {
+-        *pBuffer++ = '}';
+-        *pBuffer = 0;
++
++        pBuffer = pO->getValue()->toStr(rLen, pBuffer, deep);
+     }
+-    rLen -= 1;
+ 
+-    return pBuffer;
++    return addDeepStringLast(rLen, pBuffer, deep - 1, '}');
+ }
+-char *cJSONobject::fromStr(char *pBuffer)
++
++char *
++cJSONobject::fromStr(char *pBuffer)
+ {
+     char sep = '{';
+ 
+@@ -388,13 +511,7 @@ char *cJSONobject::fromStr(char *pBuffer)
+             pBuffer ++;
+             cJSONbase *pObj = generate(this, pBuffer);
+             if (pObj != NULL) {
+-                int idx = getIndex(name);
+-                if (idx < 0) {
+-                    cJSONobj *pO = new cJSONobj(name, pObj);
+-                    value.push_back(pO);
+-                } else {
+-                    value[idx]->setValue(pObj);
+-                }
++                setValue(name, pObj, true);
+             } else {
+                 return NULL;
+             }
+@@ -402,6 +519,7 @@ char *cJSONobject::fromStr(char *pBuffer)
+             return NULL;
+         }
+         sep = ',';
++        pBuffer = skipWS(pBuffer);
+     }
+ 
+     if (*pBuffer != '}') {
+diff --git a/src/cjson.h b/src/cjson.h
+index 41e0fd6..354860b 100644
+--- a/src/cjson.h
++++ b/src/cjson.h
+@@ -43,6 +43,29 @@ class cJSONbase {
+ 
+     cJSONbase *searchArray(const char *pStr);
+     cJSONbase *searchObject(const char *pStr);
++    protected:
++
++    char *addDeepString(int &rLen, char *pBuffer, int deep, char c, bool first)
++    {
++        deep *= 3;
++        rLen -= 2 + 2 * deep;
++        if (0 < rLen) {
++            if (true == first) { *pBuffer++ = c; }
++
++            *pBuffer++ = '\n';
++            memset(pBuffer, ' ', deep);
++            pBuffer += deep;
++
++            if (false == first) { *pBuffer++ = c; }
++        }
++        return pBuffer;
++    }
++    char *addDeepStringFirst(int &rLen, char *pBuffer, int deep, char c) {
++            return addDeepString(rLen, pBuffer, deep, c, true);
++    }
++    char *addDeepStringLast(int &rLen, char *pBuffer, int deep, char c) {
++        return addDeepString(rLen, pBuffer, deep, c, false);
++    }
+     public:
+     cJSONbase(eJSONtype t, cJSONbase *pP) {
+         pParent = pP;
+@@ -53,11 +76,21 @@ class cJSONbase {
+     }
+ 
+     bool isEnd(char c) { return c <= ' '; }
++    const char *getName(const char *pStr, char *pBuffer, char *pBufferEnd) {
++        pBufferEnd - 1;
++        while (*pStr && *pStr != '/' && *pStr != '[' && pBuffer != pBufferEnd ) {
++            *pBuffer++ = *pStr++;
++        }
++        *pBuffer = 0;
++        return pStr;
++    }
+ 
+     eJSONtype getType() const { return this ? type : eJT_NONE; }
+ 
+     cJSONbase *getParent() { return this ? pParent : 0; }
+ 
++    cJSONbase *searchOrGenerate(const char *pStr);
++
+     cJSONbase *search(const char *pStr) {
+         cJSONbase *pRet = this;
+         switch (pStr[0]) {
+@@ -95,7 +128,7 @@ class cJSONbase {
+         }
+     }
+ 
+-    virtual char *toStr(int &rLen, char *pBuffer) = 0;
++    virtual char *toStr(int &rLen, char *pBuffer, int deep = 0) = 0;
+     virtual char *fromStr(char *pBuffer) = 0;
+ 
+     static cJSONbase *generate(cJSONbase *pP, char *&);
+@@ -114,7 +147,7 @@ class cJSONnone : public cJSONbase {
+     cJSONnone(cJSONbase *pP) : cJSONbase(eJT_NONE, pP) { }
+     ~cJSONnone() { }
+ 
+-    char *toStr(int &rLen, char *pBuffer) {
++    char *toStr(int &rLen, char *pBuffer, int deep = 0) {
+         if (4 <= rLen ) {
+             *pBuffer++ = 'n';
+             *pBuffer++ = 'i';
+@@ -140,7 +173,7 @@ class cJSONbool : public cJSONbase {
+     ~cJSONbool() { }
+     bool getValue() { return value; }
+     void setValue(bool v) { value = v; }
+-    char *toStr(int &rLen, char *pBuffer);
++    char *toStr(int &rLen, char *pBuffer, int deep);
+     char *fromStr(char *pBuffer);
+ };
+ 
+@@ -156,7 +189,7 @@ class cJSONscalar : public cJSONbase {
+     unsigned long long getValue() { return value; }
+     void setValue(unsigned long long v) { value = v; }
+ 
+-    char *toStr(int &rLen, char *pBuffer);
++    char *toStr(int &rLen, char *pBuffer, int deep = 0);
+     char *fromStr(char *pBuffer);
+ };
+ 
+@@ -172,7 +205,7 @@ class cJSONfloat : public cJSONbase {
+     double getValue() { return value; }
+     void setValue(double v) { value = v; }
+ 
+-    char *toStr(int &rLen, char *pBuffer);
++    char *toStr(int &rLen, char *pBuffer, int deep = 0);
+     char *fromStr(char *pBuffer);
+ };
+ 
+@@ -212,7 +245,7 @@ class cJSONstring : public cJSONbase {
+     const char *getValue() { return value; }
+     void setValue(char *v) { resizeBuffer(strlen(v), v); }
+ 
+-    char *toStr(int &rLen, char *pBuffer);
++    char *toStr(int &rLen, char *pBuffer, int deep = 0);
+     char *fromStr(char *pBuffer);
+ };
+ 
+@@ -221,63 +254,84 @@ class cJSONarray : public cJSONbase {
+     public:
+     cJSONarray(cJSONbase *pP) : cJSONbase(eJT_ARRAY, pP) { }
+     ~cJSONarray() { }
++
++    int getSize() const { return (int) value.size(); }
++
+     cJSONbase *getValue(int idx) {
+         return 0 <= idx && ((size_t) idx) < value.size() ? value[idx] : 0;
+     }
++
+     void addValue(cJSONbase *v) {
+         value.push_back(v);
+     }
+-    void setValue(int idx, cJSONbase *v) {
++
++    void setValue(int idx, cJSONbase *v, bool createAsNeeded = false) {
++        if (createAsNeeded) {
++            while (((size_t) idx) <= value.size()) {
++                value.push_back(new cJSONnone(this));
++            }
++        }
+         if (0 <= idx && ((size_t) idx) < value.size()) {
+             value[idx] = v;
+         }
+     }
+ 
+-    char *toStr(int &rLen, char *pBuffer);
++    char *toStr(int &rLen, char *pBuffer, int deep = 0);
+     char *fromStr(char *pBuffer);
+ };
+ 
+-class cJSONobj {
+-    std::string name;
+-    cJSONbase *value;
+-    public:
+-    cJSONobj(std::string s, cJSONbase *v) {
+-        name = s;
+-        value = v;
+-    }
+-    ~cJSONobj() {
+-        if (value) {
+-            delete value;
++class cJSONobject : public cJSONbase {
++    class cJSONobj {
++        std::string name;
++        cJSONbase *value;
++        public:
++        cJSONobj(std::string s, cJSONbase *v) {
++            name = s;
++            value = v;
++        }
++        ~cJSONobj() {
++            if (value) {
++                delete value;
++            }
+         }
+-    }
+ 
+-    const char *getName() { return name.c_str(); }
+-    cJSONbase *getValue() { return value; }
+-    void setValue(cJSONbase *v) { if (this) { value = v; } }
+-    bool checkName(const char *s) { return 0 == strcmp(name.c_str(), s); }
+-    bool checkName(std::string s) { return name == s; }
++        const char *getName() { return name.c_str(); }
++        cJSONbase *getValue() { return value; }
++        void setValue(cJSONbase *v) { if (this) { value = v; } }
++        bool checkName(const char *s) { return 0 == strcmp(name.c_str(), s); }
++        bool checkName(std::string s) { return name == s; }
+ 
+-};
++    };
+ 
+-class cJSONobject : public cJSONbase {
+-    cJSONbase *pParent;
+     std::vector<cJSONobj *>value;
+-    int getIndex(const char *s) {
++    int getIndex(const char *s, bool createAsNeeded) {
+         for (size_t idx = 0; idx < value.size(); idx++) {
+             if (value[idx]->checkName(s)) {
+-                return idx;
++                return (int) idx;
+             }
+         }
++        if (createAsNeeded) {
++            cJSONobj *pO = new cJSONobj(s, NULL);
++            value.push_back(pO);
++            return ((int) value.size()) - 1;
++        }
+         return -1;
+     }
+-    int getIndex(std::string &s) {
++
++    int getIndex(std::string &s, bool createAsNeeded) {
+         for (size_t idx = 0; idx < value.size(); idx++) {
+             if (value[idx]->checkName(s)) {
+-                return idx;
++                return (int) idx;
+             }
+         }
++        if (createAsNeeded) {
++            cJSONobj *pO = new cJSONobj(s, NULL);
++            value.push_back(pO);
++            return ((int) value.size()) - 1;
++        }
+         return -1;
+     }
++
+     bool
+     getString(std::string &ret, char *&prB) {
+         char *pP = skipWS(prB);
+@@ -288,52 +342,71 @@ class cJSONobject : public cJSONbase {
+             }
+             if (*pP == 0) {
+                 ret.clear();
++                return false;
+             } else {
+                 pP = skipWS(pP + 1);
+                 prB = pP;
+                 return true;
+             }
+         }
++
++        ret.clear();
+         return false;
+     }
+ 
+-    public:
+-    cJSONobject(cJSONbase *pP) : cJSONbase(eJT_OBJECT, pP) { }
+-    ~cJSONobject() { }
+-
+     cJSONobj * getObj(int idx) {
+         return this != 0 && 0 <= idx && ((size_t)idx) < value.size() ? value[idx] : 0;
+     }
+ 
+     cJSONobj *getObj(const char *s) {
+-        return getObj(getIndex(s));
++        return getObj(getIndex(s, false));
++    }
++
++    public:
++    cJSONobject(cJSONbase *pP) : cJSONbase(eJT_OBJECT, pP) { }
++    ~cJSONobject() { }
++
++    int getSize() const { return (int) value.size(); }
++    
++    const char *getName(int idx) {
++        return this != 0 && 0 <= idx && ((size_t)idx) < value.size() ? value[idx]->getName() : 0;
++    }
++    
++    cJSONbase *getValue(int idx) {
++        return this != 0 && 0 <= idx && ((size_t)idx) < value.size() ? value[idx]->getValue() : 0;
+     }
+ 
+     cJSONbase *getValue(const char *s) {
+-        cJSONobj *pO = getObj(getIndex(s));
++        cJSONobj *pO = getObj(getIndex(s, false));
+         return pO ? pO->getValue() : NULL;
+     }
+ 
+     cJSONbase *getValue(std::string &s) {
+-        cJSONobj *pO = getObj(getIndex(s));
++        cJSONobj *pO = getObj(getIndex(s, false));
+         return pO ? pO->getValue() : NULL;
+     }
+ 
+-    void setValue(const char *s, cJSONbase *v) {
+-        cJSONobj *pO = getObj(getIndex(s));
+-        if (pO) {
++    void setValue(const char *s, cJSONbase *v, bool createAsNeeded = false) {
++        cJSONobj *pO = getObj(getIndex(s, createAsNeeded));
++        if (createAsNeeded && pO == NULL) {
++            pO = new cJSONobj(s, v);
++            value.push_back(pO);
++        } else if (pO) {
+             pO->setValue(v);
+         }
+     }
+ 
+-    void setValue(std::string &s, cJSONbase *v) {
+-        cJSONobj *pO = getObj(getIndex(s));
+-        if (pO) {
++    void setValue(std::string &s, cJSONbase *v, bool createAsNeeded = false) {
++        cJSONobj *pO = getObj(getIndex(s, createAsNeeded));
++        if (createAsNeeded && pO == NULL) {
++            pO = new cJSONobj(s, v);
++            value.push_back(pO);
++        } else if (pO) {
+             pO->setValue(v);
+         }
+     }
+ 
+-    char *toStr(int &rLen, char *pBuffer);
++    char *toStr(int &rLen, char *pBuffer, int deep = 0);
+     char *fromStr(char *pBuffer);
+ };
+ 
+diff --git a/src/cmodule.h b/src/cmodule.h
+index ca24738..1be6221 100644
+--- a/src/cmodule.h
++++ b/src/cmodule.h
+@@ -89,7 +89,7 @@ class cModule {
+ 
+     cModule *searchModule(const char *pPath) {
+         const char *pSlash = strchr(pPath, '/');
+-        int len = pSlash ? pSlash - pPath : strlen(pPath);
++        size_t len = pSlash ? pSlash - pPath : strlen(pPath);
+         cModule *pRet = NULL;
+         if (pPath == pSlash) {
+             pRet = this;
+diff --git a/src/coutput.h b/src/coutput.h
+index 05a461b..f508607 100644
+--- a/src/coutput.h
++++ b/src/coutput.h
+@@ -42,13 +42,15 @@ class cOutput {
+     char aBuffer[1024];
+     FILE *pOut; 
+     public:
+-    cOutput(FILE *pO) {
++    cOutput(FILE *pO = NULL) {
+         pOut = pO;
+         pLastModule = NULL;
+     }
+ 
+     virtual ~cOutput();
+ 
++    void setOutputFile(FILE *pO) { pOut = pO; }
++    
+     virtual const char *getStringValue(cWire *);
+     virtual void headerStart();
+     virtual void headerSetStartTime(long long);

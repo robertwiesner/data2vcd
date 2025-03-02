@@ -89,7 +89,7 @@ class cModule {
 
     cModule *searchModule(const char *pPath) {
         const char *pSlash = strchr(pPath, '/');
-        int len = pSlash ? pSlash - pPath : strlen(pPath);
+        size_t len = pSlash ? pSlash - pPath : strlen(pPath);
         cModule *pRet = NULL;
         if (pPath == pSlash) {
             pRet = this;

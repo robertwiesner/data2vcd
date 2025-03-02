@@ -1,0 +1,321 @@
+$date
+    Date Text: 
+$end
+$version
+    VCD generator V0.0.1
+$end
+$comment
+    Revision information
+$version
+$timescale 1ps $end
+$scope module CLK $end
+$var wire 1 ! CLOCK $end
+$upscope $end
+$scope module ELA0 $end
+$scope module TRACE[0] $end
+$var wire 1 " valid $end
+$var wire 1 # write $end
+$var wire 59 $ addr $end
+$upscope $end
+$scope module TRACE[1] $end
+$var wire 1 % valid $end
+$var wire 1 & write $end
+$var wire 59 ' addr $end
+$upscope $end
+$scope module TRACE[2] $end
+$var wire 1 ( valid $end
+$var wire 1 ) write $end
+$var wire 59 * addr $end
+$upscope $end
+$scope module TRACE[3] $end
+$var wire 1 + valid $end
+$var wire 1 , write $end
+$var wire 59 - addr $end
+$upscope $end
+$scope module TRACE[4] $end
+$var wire 1 . valid $end
+$var wire 1 / write $end
+$var wire 59 0 addr $end
+$upscope $end
+$scope module TRACE[5] $end
+$var wire 1 1 valid $end
+$var wire 1 2 write $end
+$var wire 59 3 addr $end
+$upscope $end
+$scope module TRACE[6] $end
+$var wire 1 4 valid $end
+$var wire 1 5 write $end
+$var wire 59 6 addr $end
+$upscope $end
+$scope module TRACE[7] $end
+$var wire 1 7 valid $end
+$var wire 1 8 write $end
+$var wire 59 9 addr $end
+$upscope $end
+$upscope $end
+$scope module ELA1 $end
+$scope module TRACE[0] $end
+$var wire 1 : valid $end
+$var wire 1 ; write $end
+$var wire 59 < addr $end
+$upscope $end
+$scope module TRACE[1] $end
+$var wire 1 = valid $end
+$var wire 1 > write $end
+$var wire 59 ? addr $end
+$upscope $end
+$scope module TRACE[2] $end
+$var wire 1 @ valid $end
+$var wire 1 A write $end
+$var wire 59 B addr $end
+$upscope $end
+$scope module TRACE[3] $end
+$var wire 1 C valid $end
+$var wire 1 D write $end
+$var wire 59 E addr $end
+$upscope $end
+$scope module TRACE[4] $end
+$var wire 1 F valid $end
+$var wire 1 G write $end
+$var wire 59 H addr $end
+$upscope $end
+$scope module TRACE[5] $end
+$var wire 1 I valid $end
+$var wire 1 J write $end
+$var wire 59 K addr $end
+$upscope $end
+$scope module TRACE[6] $end
+$var wire 1 L valid $end
+$var wire 1 M write $end
+$var wire 59 N addr $end
+$upscope $end
+$scope module TRACE[7] $end
+$var wire 1 O valid $end
+$var wire 1 P write $end
+$var wire 59 Q addr $end
+$upscope $end
+$upscope $end
+$scope module ELA2 $end
+$scope module TRACE[0] $end
+$var wire 1 R valid $end
+$var wire 1 S write $end
+$var wire 59 T addr $end
+$upscope $end
+$scope module TRACE[1] $end
+$var wire 1 U valid $end
+$var wire 1 V write $end
+$var wire 59 W addr $end
+$upscope $end
+$scope module TRACE[2] $end
+$var wire 1 X valid $end
+$var wire 1 Y write $end
+$var wire 59 Z addr $end
+$upscope $end
+$scope module TRACE[3] $end
+$var wire 1 [ valid $end
+$var wire 1 \ write $end
+$var wire 59 ] addr $end
+$upscope $end
+$scope module TRACE[4] $end
+$var wire 1 ^ valid $end
+$var wire 1 _ write $end
+$var wire 59 ` addr $end
+$upscope $end
+$scope module TRACE[5] $end
+$var wire 1 a valid $end
+$var wire 1 b write $end
+$var wire 59 c addr $end
+$upscope $end
+$scope module TRACE[6] $end
+$var wire 1 d valid $end
+$var wire 1 e write $end
+$var wire 59 f addr $end
+$upscope $end
+$scope module TRACE[7] $end
+$var wire 1 g valid $end
+$var wire 1 h write $end
+$var wire 59 i addr $end
+$upscope $end
+$upscope $end
+$scope module ELA3 $end
+$scope module TRACE[0] $end
+$var wire 1 j valid $end
+$var wire 1 k write $end
+$var wire 59 l addr $end
+$upscope $end
+$scope module TRACE[1] $end
+$var wire 1 m valid $end
+$var wire 1 n write $end
+$var wire 59 o addr $end
+$upscope $end
+$scope module TRACE[2] $end
+$var wire 1 p valid $end
+$var wire 1 q write $end
+$var wire 59 r addr $end
+$upscope $end
+$scope module TRACE[3] $end
+$var wire 1 s valid $end
+$var wire 1 t write $end
+$var wire 59 u addr $end
+$upscope $end
+$scope module TRACE[4] $end
+$var wire 1 v valid $end
+$var wire 1 w write $end
+$var wire 59 x addr $end
+$upscope $end
+$scope module TRACE[5] $end
+$var wire 1 y valid $end
+$var wire 1 z write $end
+$var wire 59 { addr $end
+$upscope $end
+$scope module TRACE[6] $end
+$var wire 1 | valid $end
+$var wire 1 } write $end
+$var wire 59 ~ addr $end
+$upscope $end
+$scope module TRACE[7] $end
+$var wire 1 "! valid $end
+$var wire 1 "" write $end
+$var wire 59 "# addr $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+$dumpvars
+x!
+x"
+x#
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx $
+x%
+x&
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx '
+x(
+x)
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx *
+x+
+x,
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -
+x.
+x/
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 0
+x1
+x2
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 3
+x4
+x5
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 6
+x7
+x8
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 9
+x:
+x;
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx <
+x=
+x>
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ?
+x@
+xA
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx B
+xC
+xD
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx E
+xF
+xG
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx H
+xI
+xJ
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx K
+xL
+xM
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx N
+xO
+xP
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Q
+xR
+xS
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx T
+xU
+xV
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx W
+xX
+xY
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Z
+x[
+x\
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ]
+x^
+x_
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx `
+xa
+xb
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx c
+xd
+xe
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx f
+xg
+xh
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx i
+xj
+xk
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx l
+xm
+xn
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx o
+xp
+xq
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx r
+xs
+xt
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx u
+xv
+xw
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx x
+xy
+xz
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx {
+x|
+x}
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ~
+x "!
+x ""
+bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx "#
+#0
+0!
+#1
+1!
+#2
+0!
+#3
+1!
+#4
+0!
+#5
+1!
+#6
+0!
+#7
+1!
+#8
+0!
+#9
+1!
+#10
+0!
+#11
+1!
+#12
+0!
+#13
+1!
+#14
+0!
+#15
+1!
+#16
+0!
+#17
+1!
+#18
+0!
+#19
+1!
+DONE!!!
