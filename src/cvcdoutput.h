@@ -105,7 +105,7 @@ class cVCDOutput : public cOutput {
     virtual void headerEnd();
     
     virtual void setTime(long long);
-    virtual void print(cWire *);
+    virtual void print(cWire *pW) { if (pOut && pW && pW->hasChanged()) { fprintf(pOut, "%s\n", getStringValue(pW)); }}
 
     virtual void finish();
 

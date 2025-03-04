@@ -13,7 +13,7 @@
 				"awburst"      : { "len" :  2 },
 				"awlock"       : { "len" :  1 },
 				"awcache"      : { "len" :  4 },
-				"awprot"       : { "len" :  3 } ,
+				"awprot"       : { "len" :  3 },
 				"awnse"        : { "len" :  1 },
 				"awqos"        : { "len" :  4 },
 				"awuser"       : { "len" :  4 },

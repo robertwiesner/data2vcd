@@ -57,7 +57,7 @@ void cOutput::headerEnd()
 {
     // over all wires generate the short names
     size_t wireCount = pLastModule->getWireCount();
-    fprintf(pOut, "Total WireCount: %ld\n", wireCount);
+    fprintf(pOut, "Total WireCount: %d\n", (int) wireCount);
     fprintf(pOut, "End Header\n");
 }
     
@@ -112,11 +112,6 @@ const char *cOutput::getStringValue(cWire *pW)
     return aBuffer;
 }
 
-void cOutput::print(cWire *pW)
-{
-    fprintf(pOut, "%s -> %s\n", pW->getName(), getStringValue(pW));
-}
-
 void cOutput::finish()
 {
     fprintf(pOut, "DONE!!!\n");
@@ -131,8 +126,6 @@ void cOutput::flush()
 {
     for (size_t idx = 0; idx < items.size(); idx++) {
         cWire *pW = items[idx]->pWire;
-        if (pW && pW->isSet()) {
-            print(pW);
-        }
+        print(pW);
     }
 }

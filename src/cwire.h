@@ -44,8 +44,8 @@ class cWire {
     unsigned char *pBuffer; // buffer to store the value
     std::string name;       // regular name
     std::string shortName;  // short name as needed by the output
-    bool changed;  // track if a new value has be set
-    bool valueSet; // true after the first set 
+    bool valueChanged;      // track if a new value has been updated - meaning this needs to be dumped into the output file
+    bool valueInvalid;      // true if value is invalid (X)
     public:
     cWire(eWireType wt, size_t b, const char *pName) {
         wireType = wt;
@@ -53,8 +53,8 @@ class cWire {
         name = pName;
         shortName = "";
         pBuffer = new unsigned char[(b + 7) / 8];
-        valueSet = false;
-        changed = 0;
+        valueChanged = true;
+        valueInvalid = true;
         index = 0;
     }
 
@@ -66,9 +66,8 @@ class cWire {
         shortName = pSN;
     }
 
-    bool isSet() { return valueSet; }
     // return and clean if value has changed since the last checked
-    bool isChanged() { bool ret = changed; changed = false; return ret; }
+    bool hasChanged() { bool ret = valueChanged; valueChanged = false; return ret; }
 
     // access functions
     size_t      getBits()      { return bits;         }
@@ -77,12 +76,24 @@ class cWire {
     const char *getShortName() { return shortName.c_str(); }
     const unsigned char *getBuffer() { return pBuffer; }
     
+    bool isInvalid() const { return valueInvalid; }
+    bool isValid()   const { return ! valueInvalid; }
+
+    void setInvalid() {
+        valueChanged = false == valueInvalid;
+        valueInvalid = true;
+    }
+
     // set functions
     void setValue(size_t bytes, unsigned char *pV) {
-        if (valueSet == false || memcmp(pBuffer, pV, bytes)) {
-            valueSet = true;
-            changed  = true;
-            memcpy(pBuffer, pV, 8 * bytes < bits ? bytes : (bits+7)/8);
+        size_t localSize = (bits+7)/8;
+
+        bytes = bytes < localSize ? bytes : localSize;
+
+        if (valueInvalid || memcmp(pBuffer, pV, bytes)) {
+            valueInvalid = false;
+            valueChanged = true;
+            memcpy(pBuffer, pV, bytes);
         }
     }
 

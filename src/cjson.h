@@ -77,7 +77,7 @@ class cJSONbase {
 
     bool isEnd(char c) { return c <= ' '; }
     const char *getName(const char *pStr, char *pBuffer, char *pBufferEnd) {
-        pBufferEnd - 1;
+        pBufferEnd -= 1;
         while (*pStr && *pStr != '/' && *pStr != '[' && pBuffer != pBufferEnd ) {
             *pBuffer++ = *pStr++;
         }
@@ -371,7 +371,7 @@ class cJSONobject : public cJSONbase {
     const char *getName(int idx) {
         return this != 0 && 0 <= idx && ((size_t)idx) < value.size() ? value[idx]->getName() : 0;
     }
-    
+
     cJSONbase *getValue(int idx) {
         return this != 0 && 0 <= idx && ((size_t)idx) < value.size() ? value[idx]->getValue() : 0;
     }

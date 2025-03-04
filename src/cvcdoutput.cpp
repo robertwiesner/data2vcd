@@ -72,7 +72,7 @@ void cVCDOutput::headerWire(cWire *pW, std::string prefix)
     }
 
     pW->setShortName(shortWireGenerator(aBuffer + sizeof(aBuffer)));
-    fprintf(pOut, "$var wire %ld %s %s $end\n", pW->getBits(), pW->getShortName(), printableCharOnly(pW->getName()));
+    fprintf(pOut, "$var wire %d %s %s $end\n", (int) pW->getBits(), pW->getShortName(), printableCharOnly(pW->getName()));
 }
 
 void cVCDOutput::headerEnd()
@@ -85,28 +85,7 @@ void cVCDOutput::headerEnd()
 
     for (std::vector<sData *>::iterator it = items.begin(); it != items.end(); it++) {
         cWire *pW = (*it)->pWire;
-        if (pW != NULL) {
-            char *pPtr = aBuffer;
-            const char *pSN = pW->getShortName();
-            size_t bitLen = pW->getBits();
-
-            if (1 < bitLen) {
-                *pPtr++ = 'b';
-                for (size_t idx = bitLen; 0 < idx--; ) {
-                    *pPtr++ = 'x';
-                }
-
-                *pPtr++ = ' ';
-            } else {
-                *pPtr++ = 'x';
-            }
-
-            while (*pSN) {
-                *pPtr++ = *pSN++;
-            }
-            *pPtr = 0;
-            fprintf(pOut, "%s\n", aBuffer);
-        }
+        print(pW);
     }
 }
     
@@ -115,14 +94,16 @@ void cVCDOutput::setTime(long long time)
     flush();
     if (0 < firstTimeOff) {
         long currOff  = ftell(pOut);
-        if (5 < time && 0 == fseek(pOut, firstTimeOff, SEEK_SET)) {
-            fprintf(pOut, "#%lld", time - 5);
+        if (1 < time && 0 == fseek(pOut, firstTimeOff, SEEK_SET)) {
+            fprintf(pOut, "#%lld", time - 1);
             fseek(pOut, currOff, SEEK_SET);
         }
         firstTimeOff = 0;
     }
-    lastTime = time;
-    fprintf(pOut, "#%lld\n", time);
+    if (lastTime != time) {
+        lastTime = time;
+        fprintf(pOut, "#%lld\n", time);
+    }
 }
 
 const char *
@@ -132,8 +113,8 @@ cVCDOutput::getStringValue(cWire *pW)
     const char *pSN = pW->getShortName();
     const unsigned char *pVal = pW->getBuffer();
     size_t bitLen = pW->getBits();
-    char one  = pW->isSet() ? '1' : 'x';
-    char zero = pW->isSet() ? '0' : 'x';
+    char one  = pW->isValid() ? '1' : 'x';
+    char zero = pW->isValid() ? '0' : 'x';
 
     if (1 < bitLen) {
         *pPtr++ = 'b';
@@ -153,15 +134,13 @@ cVCDOutput::getStringValue(cWire *pW)
     return aBuffer;
 }
 
-void cVCDOutput::print(cWire *pW)
-{
-    fprintf(pOut, "%s\n", getStringValue(pW));
-}
-
 void cVCDOutput::finish()
 {
-    fprintf(pOut, "#%lld\n", lastTime+1);
-    fprintf(pOut, "DONE!!!\n");
+    if (pOut) {
+        fprintf(pOut, "#%lld\n", lastTime+1);
+        fprintf(pOut, "DONE!!!\n");
+    }
+    pOut = NULL;
 }
 
 cVCDOutput::~cVCDOutput()

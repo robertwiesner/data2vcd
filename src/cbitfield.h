@@ -46,16 +46,17 @@ class cBitfield {
     ~cBitfield();
     void printHeader(const char *pPrefix);
     void setTime(unsigned long long);
-    void updateValue(unsigned long long id, int byteSize, const char *pPtr);
+    
+    void updateValue(unsigned long long id, int byteSize, const void *pPtr);
 
-    void updateValue(cModule *pMod, int byteSize, const char *pPtr) {
+    void updateValue(cModule *pMod, int byteSize, const void *pPtr) {
       std::map<cModule *, unsigned long long>::iterator it = module2index.find(pMod);
       if (it != module2index.end()) {
         updateValue(it->second, byteSize, pPtr);
       }
     }
 
-    void updateValue(const char *pName, int byteSize, const char *pPtr) {
+    void updateValue(const char *pName, int byteSize, const void *pPtr) {
       cModule *pMod = pFirst->searchModule(pName);
       updateValue(pMod, byteSize, pPtr);
     }

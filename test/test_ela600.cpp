@@ -76,22 +76,27 @@ main(int argc, char **ppArgv)
     cELAtrace ELAtrace(pELA, 0x1000);
     pELA->printHeader("");
 
-    unsigned char aELA1[] = {0x6c, 0x00, 0x55, 0x00, 0x77, 0x99, 0xf1, 0x12};
-    unsigned char aELA2[] = {0x70, 0x01, 0x54, 0x00, 0x66, 0x99, 0xf1, 0x12};
+    unsigned char aELA1[] = {0x6c, 0x00, 0x55, 0x00, 0x77, 0x99, 0xf1, 0x12, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa};
+    unsigned char aELA2[] = {0x70, 0x01, 0x54, 0x00, 0x66, 0x99, 0xf1, 0x12, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa};
 
     ELAtrace.setTime(0x1000);
-    ELAtrace.outputTrace(0, 8, aELA1);
-    ELAtrace.outputTrace(1, 8, aELA2);
-
+    ELAtrace.outputTrace(0, sizeof(aELA1), aELA1);
+    ELAtrace.outputTrace(1, sizeof(aELA2), aELA2);
+    aELA1[10] ^= 0xff;
+    aELA2[10] ^= 0xff;
     ELAtrace.setTime(0x1030);
 
-    ELAtrace.outputTrace(0, 8, aELA2);
-    ELAtrace.outputTrace(1, 8, aELA1);
+    ELAtrace.outputTrace(0, sizeof(aELA2), aELA2);
+    ELAtrace.outputTrace(1, sizeof(aELA1), aELA1);
 
 
+    aELA1[10] ^= 0xff;
+
+    aELA2[11] ^= 0xff;
     ELAtrace.setTime(0x1040);
 
-    ELAtrace.outputTrace(3, 8, aELA1);
+    ELAtrace.outputTrace(0, sizeof(aELA1), aELA1);
+    ELAtrace.outputTrace(3, sizeof(aELA1), aELA1);
     pELA->flush();
     pELA->finish();
     fclose(pOut);

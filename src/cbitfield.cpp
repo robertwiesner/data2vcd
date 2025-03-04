@@ -101,7 +101,10 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
 
         for (int wireIdx = 0; wireIdx < pWireList->getSize(); wireIdx++) {
             cJSONobject *pWire = dynamic_cast<cJSONobject *>(pWireList->getValue(wireIdx));
-            cWire *pW;
+
+            if (pWire == 0) {
+                return NULL;
+            }
             cJSONscalar *pStart = dynamic_cast<cJSONscalar *>(pWire->getValue("start"));
             cJSONscalar *pLen = dynamic_cast<cJSONscalar *>(pWire->getValue("len"));
             cJSONscalar *pEnd = dynamic_cast<cJSONscalar *>(pWire->getValue("end"));
@@ -117,11 +120,12 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
                 unsigned long long bitEnd = pEnd->getValue();
                 if (bitEnd < bitStart) {
                     // later error 
+                    return NULL;
                 }
                 bitLength = bitEnd - bitStart + 1;
             }
 
-            pW = new cWire(eWT_BIT, bitLength, pWireList->getName(wireIdx));
+            cWire *pW = new cWire(eWT_BIT, bitLength, pWireList->getName(wireIdx));
             pParent->addWire(pW);
             entry[modIdx]->wires[(int) bitStart] = pW;
             bitStart += bitLength;
@@ -131,8 +135,9 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
 }
 
 void
-cBitfield::updateValue(unsigned long long id, int byteSize, const char *pPtr)
+cBitfield::updateValue(unsigned long long id, int byteSize, const void *pP)
 {
+    const char *pPtr = static_cast<const char *>(pP);
     sModWireInfo *pRegMap = entry[id];
     
     if (pRegMap) {
@@ -146,7 +151,7 @@ cBitfield::updateValue(unsigned long long id, int byteSize, const char *pPtr)
             int    idx   = start / 8;
             int    val   = pPtr[idx++] & 0xff;
             unsigned char *pVal = pBuffer;
-
+            
             if (start + len <= bitSize) {
                 for (size_t bitCnt = 0; bitCnt < len; bitCnt += 8) {
                     val |= (pPtr[idx++] & 0xff) << 8;

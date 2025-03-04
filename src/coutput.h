@@ -25,8 +25,8 @@ under the License.
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include "cwire.h"
 
-class cWire;
 class cModule;
 
 class cOutput {
@@ -37,6 +37,7 @@ class cOutput {
         sData(cModule *pM, cWire *pW) { pModule = pM; pWire = pW; }
     };
     std::vector<sData *>items;
+    std::vector<std::string>errors;
     cModule *pLastModule;
 
     char aBuffer[1024];
@@ -47,6 +48,8 @@ class cOutput {
         pLastModule = NULL;
     }
 
+    void addError(const char *pErr) { errors.push_back(std::string(pErr)); }
+    void addError(std::string err) { errors.push_back(err); }
     virtual ~cOutput();
 
     void setOutputFile(FILE *pO) { pOut = pO; }
@@ -60,7 +63,13 @@ class cOutput {
     virtual void headerEnd();
     
     virtual void setTime(long long);
-    virtual void print(cWire *);
+    virtual void print(cWire *pW) {
+        if (pOut && pW && pW->hasChanged()) { 
+            fprintf(pOut, "%s: 0x%0*llX\n", pW->getName(),
+                    (((int) pW->getBits()) + 7) / 8, 
+                    pW->getAsUnsignedLongLong());
+        }
+    }
 
     virtual void flush();
     virtual void finish();
