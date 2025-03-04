@@ -19,7 +19,7 @@
 				"awuser"       : { "len" :  4 },
 				"awdomain"     : { "len" :  2 },
 				"awsnoop"      : { "len" :  4 },
-				"awstashnid"   : { "len" : 11 },
+				"awstashnid"   : { "len" : 10 },
 				"awstashniden" : { "len" :  1 },
 				"awstashpid"   : { "len" :  5 },
 				"awstashpiden" : { "len" :  1 },

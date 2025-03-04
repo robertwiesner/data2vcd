@@ -84,7 +84,7 @@ main(int argc, char **ppArgv)
     ELAtrace.outputTrace(1, sizeof(aELA2), aELA2);
     aELA1[10] ^= 0xff;
     aELA2[10] ^= 0xff;
-    ELAtrace.setTime(0x1030);
+    ELAtrace.setTime(0x1020);
 
     ELAtrace.outputTrace(0, sizeof(aELA2), aELA2);
     ELAtrace.outputTrace(1, sizeof(aELA1), aELA1);
@@ -92,7 +92,7 @@ main(int argc, char **ppArgv)
 
     aELA1[10] ^= 0xff;
 
-    aELA2[11] ^= 0xff;
+    aELA1[11] ^= 0xff;
     ELAtrace.setTime(0x1040);
 
     ELAtrace.outputTrace(0, sizeof(aELA1), aELA1);
