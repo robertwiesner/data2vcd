@@ -21,11 +21,19 @@ under the License.
 
 #include "cbitfield.h"
 
-cBitfield::cBitfield(cJSONbase *pJSON, cOutput &rO) : rOutput(rO)
+cBitfield::cBitfield(cOutput &rO, cJSONbase *pJSON) : rOutput(rO)
 {
-    pFirst = createModule(0, pJSON, 0);
+    pFirst = NULL;
+    if (pJSON) {
+        pFirst = createModule(0, pJSON, 0);
+    }
 }
 
+void
+cBitfield::addJsonModule(cJSONbase *pJSON, unsigned long long base)
+{
+    pFirst = createModule(0, pJSON, base);
+}
 
 cBitfield::~cBitfield()
 {
@@ -70,7 +78,7 @@ cBitfield::createModule(cModule *pParent, cJSONbase *pBase, unsigned long long m
 
     if (pNodeList) {
         // create the reference modules
-        cModule     *pMod = 0;
+        cModule     *pMod = pFirst->getLastModule();
 
         for (int nodeIdx = 0; nodeIdx < pNodeList->getSize(); nodeIdx++) {
             cJSONobject *pObj = dynamic_cast<cJSONobject *>(pNodeList->getValue(nodeIdx));
@@ -152,7 +160,7 @@ cBitfield::updateValue(unsigned long long id, int byteSize, const void *pP)
             int    val   = pPtr[idx++] & 0xff;
             unsigned char *pVal = pBuffer;
             
-            if (start + len <= bitSize) {
+            if (start + len <= ((size_t)bitSize)) {
                 for (size_t bitCnt = 0; bitCnt < len; bitCnt += 8) {
                     val |= (pPtr[idx++] & 0xff) << 8;
                     *pVal++ = val >> bits;

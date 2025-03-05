@@ -53,7 +53,6 @@ cJSONbase::searchObject(const char *pStr)
 
     if (pObj) {
         char aBuffer[1024];
-        char *pName = aBuffer;
 
         pStr = getName(pStr, aBuffer, aBuffer + sizeof(aBuffer));
 

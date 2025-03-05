@@ -137,7 +137,7 @@ cVCDOutput::getStringValue(cWire *pW)
 void cVCDOutput::finish()
 {
     if (pOut) {
-        fprintf(pOut, "#%lld\n", lastTime+1);
+        fprintf(pOut, "#%lld\n", lastTime + 1);
         fprintf(pOut, "DONE!!!\n");
     }
     pOut = NULL;

@@ -57,6 +57,7 @@ class cJSONbase {
             pBuffer += deep;
 
             if (false == first) { *pBuffer++ = c; }
+            *pBuffer = 0;
         }
         return pBuffer;
     }

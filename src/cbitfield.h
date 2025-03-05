@@ -34,31 +34,33 @@ class cBitfield {
     cOutput &rOutput;
     cModule *pFirst;
     struct sModWireInfo {
-      cModule *pMod;
-      std::map<int, cWire *>wires;
-      sModWireInfo(cModule *pM) { pMod = pM; }
+        cModule *pMod;
+        std::map<int, cWire *>wires;
+        sModWireInfo(cModule *pM) { pMod = pM; }
     };
     std::map<unsigned long long, sModWireInfo *>entry;
     std::map<cModule *, unsigned long long>module2index;
     cModule *createModule(cModule *pParent, cJSONbase *, unsigned long long);
-    public:
-    cBitfield(cJSONbase *pJSON, cOutput &rO);
+public:
+    cBitfield(cOutput &rO, cJSONbase *pJSON);
     ~cBitfield();
+
+    void addJsonModule(cJSONbase *pBase, unsigned long long base);
     void printHeader(const char *pPrefix);
     void setTime(unsigned long long);
     
     void updateValue(unsigned long long id, int byteSize, const void *pPtr);
 
     void updateValue(cModule *pMod, int byteSize, const void *pPtr) {
-      std::map<cModule *, unsigned long long>::iterator it = module2index.find(pMod);
-      if (it != module2index.end()) {
-        updateValue(it->second, byteSize, pPtr);
-      }
+        std::map<cModule *, unsigned long long>::iterator it = module2index.find(pMod);
+        if (it != module2index.end()) {
+            updateValue(it->second, byteSize, pPtr);
+        }
     }
 
     void updateValue(const char *pName, int byteSize, const void *pPtr) {
-      cModule *pMod = pFirst->searchModule(pName);
-      updateValue(pMod, byteSize, pPtr);
+        cModule *pMod = pFirst->searchModule(pName);
+        updateValue(pMod, byteSize, pPtr);
     }
     cModule *getFirstModule() { return pFirst; }
 

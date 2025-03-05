@@ -72,7 +72,7 @@ main(int argc, char **ppArgv)
     pEnd = pJsonEla->toStr(len, aBuffer);
     printf("ELA: %d:%s\n", (int) (sizeof(aBuffer) - len), aBuffer);
 
-    cBitfield *pELA = new cBitfield(pJsonEla, output);
+    cBitfield *pELA = new cBitfield(output, pJsonEla);
     cELAtrace ELAtrace(pELA, 0x1000);
     pELA->printHeader("");
 

@@ -74,6 +74,16 @@ class cModule {
         return pRet;
     }
 
+    cModule *getLastModule() {
+        cModule *pRet = this;
+        if (pRet) {
+            while (pRet->pNext) {
+                pRet = pRet->pNext;
+            }
+        }
+        return pRet;
+    }
+
     size_t getWireCount() {
         size_t ret = 0;
         for (cModule *p = getFirstModule(); p; p = p->pNext) {
@@ -106,7 +116,7 @@ class cModule {
                 pRet = pRet->pNext;
             }
         }
-        if (pRet && pPath[len] == '/') {
+        if (pRet && pPath && pPath[len] == '/') {
             pRet = pRet->searchModule(pPath + len + 1);
         }
 
