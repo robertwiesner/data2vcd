@@ -190,11 +190,11 @@ cJSONbase::generate(cJSONbase *pP, FILE *pIn)
     fseek(pIn, 0, SEEK_SET);
 
     char *pBuffer   = new char[size + 1];
-    char *pStart    = pBuffer;
 
-    fread(pBuffer, size, 1, pIn);
-    pBuffer[size] = 0;
-    cJSONbase *pRet = cJSONbase::generate(pP, pStart);
+    size_t readSize = fread(pBuffer, 1, size, pIn);
+    pBuffer[readSize] = 0;
+    const char *pPtr = pBuffer;
+    cJSONbase *pRet = cJSONbase::generate(pP, pPtr);
 
     delete[] pBuffer;
 
@@ -202,14 +202,14 @@ cJSONbase::generate(cJSONbase *pP, FILE *pIn)
 }
 
 cJSONbase *
-cJSONbase::generate(cJSONbase *pP, char *&prStart)
+cJSONbase::generate(cJSONbase *pP, const char *&prStart)
 {
     cJSONbase *pRet = NULL;
 
-    char *pS = skipWS(prStart);
-    char *pT = pS;
+    const char *pS = skipWS(prStart);
 
     switch (*pS) {
+    case '\'':
     case '"': // string
         pRet = new cJSONstring(pP, 0);
         break;
@@ -222,7 +222,6 @@ cJSONbase::generate(cJSONbase *pP, char *&prStart)
 
     case '-':
     case '+':
-        pT++;
     case '0': // scalar or float
     case '1':
     case '2':
@@ -232,25 +231,12 @@ cJSONbase::generate(cJSONbase *pP, char *&prStart)
     case '6':
     case '7':
     case '8':
-    case '9': {
-        char *pEnd;
-        strtoull(pT, &pEnd, 0);
-        if (pEnd) {
-            pEnd = skipWS(pEnd);
-            if (*pEnd == ',' || *pEnd == '}' || *pEnd == ']') {
-                pRet = new cJSONscalar(pP);
-            }
+    case '9':
+        if (isScalar(pS)) {
+            pRet = new cJSONscalar(pP);
+        } else if (isFloat(pS)) {
+            pRet = new cJSONfloat(pP);
         }
-        if (pRet == 0) {
-            strtod(pS, &pEnd);
-            if (pEnd) {
-                pEnd = skipWS(pEnd);
-                if (*pEnd == ',' || *pEnd == '}' || *pEnd == ']') {
-                    pRet = new cJSONfloat(pP);
-                }
-            }
-        }
-    }
         break;
     case 't':
     case 'f': // true or false
@@ -259,7 +245,7 @@ cJSONbase::generate(cJSONbase *pP, char *&prStart)
         }
         break;
     case 'n':
-        if (0 == strncmp(pS, "nil", 3)) {
+        if (0 == strncmp(pS, "nil", 3) || 0 == strncmp(pS, "null", 3)) {
             pRet = new cJSONnone(pP);
         }
     default:
@@ -273,7 +259,7 @@ cJSONbase::generate(cJSONbase *pP, char *&prStart)
             pRet = 0;
         } else {
             pS = skipWS(pS);
-            if (*pS != ',' && *pS != ']' && *pS != '}' && *pS != 0) {
+            if (! isObjectEnd(*pS) && *pS) {
                 delete pRet;
                 pRet = 0;
             }
@@ -283,9 +269,8 @@ cJSONbase::generate(cJSONbase *pP, char *&prStart)
     return pRet;
 }
 
-
-
-char *cJSONbool::toStr(int &rLen, char *pBuffer, int deep)
+char *
+cJSONbool::toStr(int &rLen, char *pBuffer, int deep)
 {
     if (value) {
         if (4 < rLen) {
@@ -304,8 +289,8 @@ char *cJSONbool::toStr(int &rLen, char *pBuffer, int deep)
     return pBuffer;
 }
 
-char *
-cJSONbool::fromStr(char *pBuffer)
+const char *
+cJSONbool::fromStr(const char *pBuffer)
 {
     if (0 == strncmp(pBuffer, "true", 4)) {
         value = true;
@@ -333,8 +318,8 @@ cJSONscalar::toStr(int &rLen, char *pBuffer, int deep)
     return pBuffer;
 }
 
-char *
-cJSONscalar::fromStr(char *pBuffer)
+const char *
+cJSONscalar::fromStr(const char *pBuffer)
 {
     bool neg = false;
     if (*pBuffer == '-') {
@@ -343,7 +328,9 @@ cJSONscalar::fromStr(char *pBuffer)
     } else if (*pBuffer == '+') {
         pBuffer++;
     }
-    value = strtoull(pBuffer, &pBuffer, 0);
+    char *pEnd = NULL;
+    value = strtoull(pBuffer, &pEnd, 0);
+    pBuffer = pEnd;
     if (neg) {
         value = 1 + (~value);
     }
@@ -366,12 +353,12 @@ cJSONfloat::toStr(int &rLen, char *pBuffer, int deep)
     return pBuffer;
 }
 
-char *
-cJSONfloat::fromStr(char *pBuffer)
+const char *
+cJSONfloat::fromStr(const char *pBuffer)
 {
-
-    value = strtod(pBuffer, &pBuffer);
-    return pBuffer;
+    char *pEnd = NULL;
+    value = strtod(pBuffer, &pEnd);
+    return pEnd;
 }
 
 char *
@@ -400,14 +387,15 @@ cJSONstring::toStr(int &rLen, char *pBuffer, int deep)
     return pBuffer;
 }
 
-char *
-cJSONstring::fromStr(char *pBuffer)
+const char *
+cJSONstring::fromStr(const char *pBuffer)
 {
-    withTripple = pBuffer[0] == '"' && pBuffer[1] == '"' && pBuffer[2] == '"';
-    char *pB = pBuffer + (withTripple ? 3 : 1);
+    const char termChar = *pBuffer;
+    withTripple = pBuffer[0] == termChar && pBuffer[1] == termChar && pBuffer[2] == termChar;
+    const char *pB = pBuffer + (withTripple ? 3 : 1);
 
     if (withTripple) {
-        while (*pB && pB[0] != '"' && pB[1] != '"' && pB[2] != '"') {
+        while (*pB && pB[0] != termChar && pB[1] != termChar && pB[2] != termChar) {
             pB++;
         }
 
@@ -416,7 +404,7 @@ cJSONstring::fromStr(char *pBuffer)
             pB += 3;
         }
     } else {
-        while (*pB && *pB != '"') {
+        while (*pB && *pB != termChar) {
             pB++;
         }
 
@@ -445,8 +433,8 @@ cJSONarray::toStr(int &rLen, char *pBuffer, int deep)
     return addDeepStringLast(rLen, pBuffer, deep - 1, ']');
 }
 
-char *
-cJSONarray::fromStr(char *pBuffer)
+const char *
+cJSONarray::fromStr(const char *pBuffer)
 {
     char sep = '[';
 
@@ -493,8 +481,8 @@ cJSONobject::toStr(int &rLen, char *pBuffer, int deep)
     return addDeepStringLast(rLen, pBuffer, deep - 1, '}');
 }
 
-char *
-cJSONobject::fromStr(char *pBuffer)
+const char *
+cJSONobject::fromStr(const char *pBuffer)
 {
     char sep = '{';
 

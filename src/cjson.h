@@ -74,6 +74,9 @@ class cJSONbase {
     }
 
     virtual ~cJSONbase() {
+        if (pParent != 0) {
+            pParent->removeObject(this);
+        }
     }
 
     bool isEnd(char c) { return c <= ' '; }
@@ -130,9 +133,17 @@ class cJSONbase {
     }
 
     virtual char *toStr(int &rLen, char *pBuffer, int deep = 0) = 0;
-    virtual char *fromStr(char *pBuffer) = 0;
+    virtual const char *fromStr(const char *pBuffer) = 0;
 
-    static cJSONbase *generate(cJSONbase *pP, char *&);
+    virtual cJSONbase* removeObject(cJSONbase *pP) { return 0; } // do nothing
+    static cJSONbase *generate(cJSONbase *pP, const char *&);
+    static cJSONbase *generate(cJSONbase *pP, char *&pStr) {
+        const char *pConstStr = pStr;
+        cJSONbase *pRet = generate(pP, pConstStr);
+        pStr = const_cast<char *>(pConstStr);
+        return pRet;
+    }
+
     static cJSONbase *generate(cJSONbase *pP, FILE *);
 
     static char *skipWS(char *pP) {
@@ -140,6 +151,73 @@ class cJSONbase {
             pP++;
         }
         return pP;
+    }
+
+    static const char *skipWS(const char *pP) {
+        while (*pP && *pP <= ' ') {
+            pP++;
+        }
+        return pP;
+    }
+
+    static bool isObjectEnd(char c) {
+        return c == ',' || c == '}' || c == ']';
+    }
+
+    static bool isScalar(const char *pS) {
+        if (pS[0] == '0') {
+            if (pS[1] == 'x' || pS[1] == 'X') {
+                const char *pStart = pS += 2;
+                while (('0' <= pS[0] && pS[0] <= '9') || ('A' <= pS[0] && pS[0] <= 'F') || ('a' <= pS[0] && pS[0] <= 'f')) {
+                    pS++;
+                }
+                if (pS == pStart) {
+                    return false;
+                }
+            } else {
+                pS += 1;
+                while ('0' <= pS[0] && pS[0] <= '7') {
+                    pS++;
+                }
+            }
+        } else {
+            const char *pStart = pS;
+            while ('0' <= pS[0] && pS[0] <= '9') {
+                pS++;
+            }
+            if (pS == pStart) {
+                return false;
+            }
+        }
+        pS = skipWS(pS);
+        return isObjectEnd(*pS) || *pS == 0;
+    }
+
+    static bool isFloat(const char *pS) {
+        const char *pDot = NULL;
+        const char *pExp = NULL;
+        const char *pStart = pS;
+        while (*pS) {
+            char c = *pS++;
+            if ('0' <= c && c <= '9') {
+                // OK
+            } else if (c == '.') {
+                if (pDot || pExp) { return false; }
+                pDot = pS;
+            } else if (c == 'e' || c == 'E') {
+                if (pDot == 0 || pExp) { return false; }
+                pExp = pS;
+            } else if (c == '-' || c == '+') {
+                if (pExp != pS - 1) { return false; }
+            } else {
+                break;
+            }
+        }
+        if (pS == pStart) {
+            return false;
+        }
+        pS = skipWS(pS);
+        return isObjectEnd(*pS) || *pS;
     }
 };
 
@@ -158,7 +236,7 @@ class cJSONnone : public cJSONbase {
         }
         return 0;
     }
-    char *fromStr(char *pBuffer) {
+    const char *fromStr(const char *pBuffer) {
         if (pBuffer[0] == 'n' && pBuffer[1] == 'i' && pBuffer[2] == 'l' && isEnd(pBuffer[3])) {
             return pBuffer + 3;
         } else {
@@ -175,7 +253,7 @@ class cJSONbool : public cJSONbase {
     bool getValue() { return value; }
     void setValue(bool v) { value = v; }
     char *toStr(int &rLen, char *pBuffer, int deep);
-    char *fromStr(char *pBuffer);
+    const char *fromStr(const char *pBuffer);
 };
 
 class cJSONscalar : public cJSONbase {
@@ -191,7 +269,7 @@ class cJSONscalar : public cJSONbase {
     void setValue(unsigned long long v) { value = v; }
 
     char *toStr(int &rLen, char *pBuffer, int deep = 0);
-    char *fromStr(char *pBuffer);
+    const char *fromStr(const char *pBuffer);
 };
 
 class cJSONfloat : public cJSONbase {
@@ -207,7 +285,7 @@ class cJSONfloat : public cJSONbase {
     void setValue(double v) { value = v; }
 
     char *toStr(int &rLen, char *pBuffer, int deep = 0);
-    char *fromStr(char *pBuffer);
+    const char *fromStr(const char *pBuffer);
 };
 
 class cJSONstring : public cJSONbase {
@@ -247,14 +325,18 @@ class cJSONstring : public cJSONbase {
     void setValue(char *v) { resizeBuffer(strlen(v), v); }
 
     char *toStr(int &rLen, char *pBuffer, int deep = 0);
-    char *fromStr(char *pBuffer);
+    const char *fromStr(const char *pBuffer);
 };
 
 class cJSONarray : public cJSONbase {
     std::vector<cJSONbase *> value;
     public:
     cJSONarray(cJSONbase *pP) : cJSONbase(eJT_ARRAY, pP) { }
-    ~cJSONarray() { }
+    ~cJSONarray() { 
+        while(0 < value.size()) {
+            delete value[0];
+        }
+    }
 
     int getSize() const { return (int) value.size(); }
 
@@ -277,8 +359,17 @@ class cJSONarray : public cJSONbase {
         }
     }
 
+    cJSONbase *removeObject(int idx) {
+        if (0 <= idx && ((size_t)idx) < value.size()) {
+            cJSONbase *pRet = value[idx];
+            value.erase(value.begin() + idx);
+            return pRet;
+        }
+        return 0;
+    }
+
     char *toStr(int &rLen, char *pBuffer, int deep = 0);
-    char *fromStr(char *pBuffer);
+    const char *fromStr(const char *pBuffer);
 };
 
 class cJSONobject : public cJSONbase {
@@ -294,6 +385,7 @@ class cJSONobject : public cJSONbase {
             if (value) {
                 delete value;
             }
+            value = 0;
         }
 
         const char *getName() { return name.c_str(); }
@@ -334,11 +426,11 @@ class cJSONobject : public cJSONbase {
     }
 
     bool
-    getString(std::string &ret, char *&prB) {
-        char *pP = skipWS(prB);
-        if (*pP == '"') {
-            pP++;
-            while(*pP != 0 && *pP != '"') {
+    getString(std::string &ret, const char *&prB) {
+        const char *pP = skipWS(prB);
+        if (*pP == '"' || *pP == '\'') {
+            char termChar = *pP++;
+            while(*pP != 0 && *pP != termChar) {
                 ret += *pP++;
             }
             if (*pP == 0) {
@@ -365,7 +457,11 @@ class cJSONobject : public cJSONbase {
 
     public:
     cJSONobject(cJSONbase *pP) : cJSONbase(eJT_OBJECT, pP) { }
-    ~cJSONobject() { }
+    ~cJSONobject() { 
+        while(0 < value.size()) {
+            delete value[0]->getValue();
+        }
+    }
 
     int getSize() const { return (int) value.size(); }
     
@@ -407,8 +503,40 @@ class cJSONobject : public cJSONbase {
         }
     }
 
+    cJSONbase *removeObject(int idx) {
+        if (0 <= idx && ((size_t)idx) < value.size()) {
+            cJSONobj  *pO   = value[idx];
+            cJSONbase *pRet = pO->getValue();
+            value.erase(value.begin() + idx);
+            pO->setValue(0);
+            delete pO;
+            return pRet;
+        }
+        return 0;
+    }
+
+    cJSONbase *removeObject(cJSONbase *pObj) {
+        for (size_t idx = 0; idx < value.size(); idx++) {
+            cJSONobj  *pO   = value[idx];
+            if (pO->getValue() == pObj) {
+                return removeObject(idx);
+            }
+        }
+        return 0;
+    }
+
+    cJSONbase *removeObject(const char *pName) {
+        for (size_t idx = 0; idx < value.size(); idx++) {
+            cJSONobj  *pO   = value[idx];
+            if (strcmp(pO->getName(), pName) == 0) {
+                return removeObject(idx);
+            }
+        }
+        return 0;
+    }
+
     char *toStr(int &rLen, char *pBuffer, int deep = 0);
-    char *fromStr(char *pBuffer);
+    const char *fromStr(const char *pBuffer);
 };
 
 #endif
