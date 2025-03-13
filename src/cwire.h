@@ -24,6 +24,8 @@ under the License.
 
 #include <string>
 #include <string.h>
+#include <algorithm>
+#include "ctmpbuf.h"
 
 // specify the wire data type
 enum eWireType {
@@ -41,18 +43,17 @@ class cWire {
     size_t index;           // user data 
     size_t bits;            // number of valid bits for this value
     eWireType wireType; 
-    unsigned char *pBuffer; // buffer to store the value
+    cTmpBuf buffer; // buffer to store the value
     std::string name;       // regular name
     std::string shortName;  // short name as needed by the output
     bool valueChanged;      // track if a new value has been updated - meaning this needs to be dumped into the output file
     bool valueInvalid;      // true if value is invalid (X)
     public:
-    cWire(eWireType wt, size_t b, const char *pName) {
+    cWire(eWireType wt, size_t b, const char *pName) : buffer((b + 7) / 8) {
         wireType = wt;
         bits = b;
         name = pName;
         shortName = "";
-        pBuffer = new unsigned char[(b + 7) / 8];
         valueChanged = true;
         valueInvalid = true;
         index = 0;
@@ -74,7 +75,7 @@ class cWire {
     eWireType   getWireType()  { return wireType;     }
     const char *getName()      { return name.c_str(); }
     const char *getShortName() { return shortName.c_str(); }
-    const unsigned char *getBuffer() { return pBuffer; }
+    const unsigned char *getBuffer() { return buffer.getUChar(); }
     
     bool isInvalid() const { return valueInvalid; }
     bool isValid()   const { return ! valueInvalid; }
@@ -90,10 +91,10 @@ class cWire {
 
         bytes = bytes < localSize ? bytes : localSize;
 
-        if (valueInvalid || memcmp(pBuffer, pV, bytes)) {
+        if (valueInvalid || memcmp(buffer.getUChar(), pV, bytes)) {
             valueInvalid = false;
             valueChanged = true;
-            memcpy(pBuffer, pV, bytes);
+            std::copy(pV, pV + bytes, buffer.getUChar());
         }
     }
 
@@ -121,7 +122,7 @@ class cWire {
     // helper function to access the buffer values as signed and unsinged int/lonlong values
     unsigned int getAsUnsignedInt() {
         unsigned int ret = 0;
-        unsigned char *pP = pBuffer; 
+        unsigned char *pP = buffer.getUChar(); 
         for (size_t idx = 0; idx < bits; idx += 8) {
             ret |= ((unsigned int) *pP++) << idx;
         }
@@ -139,7 +140,7 @@ class cWire {
 
     unsigned long long getAsUnsignedLongLong() {
         unsigned long long ret = 0;
-        unsigned char *pP = pBuffer; 
+        unsigned char *pP = buffer.getUChar(); 
         for (size_t idx = 0; idx < bits; idx += 8) {
             ret |= ((unsigned int) *pP++) << idx;
         }

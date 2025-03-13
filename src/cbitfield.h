@@ -40,6 +40,8 @@ class cBitfield {
     };
     std::map<unsigned long long, sModWireInfo *>entry;
     std::map<cModule *, unsigned long long>module2index;
+    cModule *createModuleNode(cModule *pParent, cJSONbase *, unsigned long long);
+    cModule *createModuleIPX(cModule *pParent, cJSONbase *, unsigned long long);
     cModule *createModule(cModule *pParent, cJSONbase *, unsigned long long);
 public:
     cBitfield(cOutput &rO, cJSONbase *pJSON);

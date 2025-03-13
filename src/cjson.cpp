@@ -20,7 +20,7 @@ under the License.
 */
 
 #include "cjson.h"
-
+#include "ctmpbuf.h"
 
 cJSONbase *
 cJSONbase::searchArray(const char *pStr)
@@ -189,14 +189,13 @@ cJSONbase::generate(cJSONbase *pP, FILE *pIn)
     size = ftell(pIn);
     fseek(pIn, 0, SEEK_SET);
 
-    char *pBuffer   = new char[size + 1];
+    cTmpBuf buffer(size + 1);
 
-    size_t readSize = fread(pBuffer, 1, size, pIn);
-    pBuffer[readSize] = 0;
-    const char *pPtr = pBuffer;
+    size_t readSize = fread(buffer.getChar(), 1, size, pIn);
+    buffer.getChar()[readSize] = 0;
+    const char *pPtr = buffer.getChar();
     cJSONbase *pRet = cJSONbase::generate(pP, pPtr);
 
-    delete[] pBuffer;
 
     return pRet;
 }
@@ -253,18 +252,18 @@ cJSONbase::generate(cJSONbase *pP, const char *&prStart)
     }
 
     if (pRet) {
-        pS = pRet->fromStr(pS);
-        if (pS == 0) {
+        const char *pEnd = pRet->fromStr(pS);
+        if (pEnd == 0) {
             delete pRet;
             pRet = 0;
         } else {
-            pS = skipWS(pS);
-            if (! isObjectEnd(*pS) && *pS) {
+            pEnd = skipWS(pEnd);
+            if (! isObjectEnd(*pEnd) && *pEnd) {
                 delete pRet;
                 pRet = 0;
             }
         }
-        prStart = pS;
+        prStart = pEnd;
     }
     return pRet;
 }
