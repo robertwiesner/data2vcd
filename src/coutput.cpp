@@ -29,15 +29,15 @@ void cOutput::headerStart()
     fprintf(pOut, "Start Header\n");
 }
 
-void cOutput::headerSetStartTime(long long time)
+void cOutput::headerSetStartTime(int64_t time)
 {
-    fprintf(pOut, "Start time: %lld", time);
+    fprintf(pOut, "Start time: %ld", time);
 }
 
 void cOutput::headerModuleStart(cModule *pM, std::string prefix)
 {
     pLastModule = pM;
-    items.push_back(new sData(pM, NULL));
+    items.push_back(new sData(pM, nullptr));
     fprintf(pOut, "%*.*sModule: %s\n", 4*pM->getDepth(), 4*pM->getDepth(), "", pM->getName());
 }
 
@@ -57,40 +57,45 @@ void cOutput::headerEnd()
 {
     // over all wires generate the short names
     size_t wireCount = pLastModule->getWireCount();
-    fprintf(pOut, "Total WireCount: %d\n", (int) wireCount);
+    fprintf(pOut, "Total WireCount: %d\n", static_cast<int>(wireCount));
     fprintf(pOut, "End Header\n");
 }
     
-void cOutput::setTime(long long time)
+void cOutput::setTime(int64_t time)
 {
     flush();
-    fprintf(pOut, "Start time: %lld\n", time);
+    fprintf(pOut, "Start time: %ld\n", time);
 }
 
 const char *cOutput::getStringValue(cWire *pW)
 {
     char *pPtr = aBuffer;
-    const unsigned char *pVal = pW->getBuffer();
+    char *pEnd = aBuffer + sizeof(aBuffer);
+    const unsigned char* pVal = pW->getBuffer();
     size_t bitLen = pW->getBits();
 
-    switch(pW->getWireType()) {
+    switch (pW->getWireType()) {
     case eWT_NONE:
         break;
+
     case eWT_BOOL:
         strcpy(pPtr, *pVal ? "TRUE" : "false");
         pPtr += strlen(pPtr);
         break;
+
     case eWT_BIT:
         for (size_t idx = bitLen; 0 < idx--; ) {
             *pPtr++ = pVal[idx / 8] & (1 << (idx & 7)) ? '1' : '0';
         }
         break;
+
     case eWT_OCT:
-        sprintf(pPtr, "%llo", pW->getAsUnsignedLongLong());
+        snprintf(pPtr, pEnd - pPtr, "%lo", pW->getAsUnsignedLongLong());
         pPtr += strlen(pPtr);
         break;
+
     case eWT_DEC:
-        sprintf(pPtr, "%lld", pW->getAsSignedLongLong());
+        snprintf(pPtr, pEnd - pPtr, "%ld", pW->getAsSignedLongLong());
         pPtr += strlen(pPtr);
         break;
 
@@ -103,10 +108,12 @@ const char *cOutput::getStringValue(cWire *pW)
             *pPtr++ = "0123456789ABCDEF"[val];
         }
         break;
+
     case eWT_STR:
         memcpy(pPtr, pVal, (bitLen + 7) / 8);
         pPtr += (bitLen + 7) / 8;
         break;
+
     }
     *pPtr = 0;
     return aBuffer;

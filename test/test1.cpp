@@ -34,7 +34,7 @@ main(int argc, char **ppArgv)
     pEnd = pJsonEla->toStr(len, aBuffer);
     printf("ELA: %d:%s\n", len, aBuffer);
 
-    cBitfield *pELA = new cBitfield(output, pJsonEla);
+    cBitfield *pELA = new cBitfield(&output, pJsonEla);
     pELA->printHeader("");
     
     unsigned int clk = 0;

@@ -1,9 +1,11 @@
 
-OBJ = cmodule.o  \
-	cwire.o      \
-	coutput.o    \
-	cvcdoutput.o \
-	cjson.o      \
+OBJ = cmodule.o     \
+	cwire.o         \
+	coutput.o       \
+	cvcdoutput.o    \
+	cjson.o         \
+	csiblingchild.o \
+	ctrackmem.o     \
 	cbitfield.o
 
 ifdef SHARED

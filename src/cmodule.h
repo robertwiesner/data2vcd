@@ -20,75 +20,52 @@ under the License.
 */
 
 #ifndef CMODULE_H
-#define CMODULE_H
+#define CMODULE_H 1
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 #include "cwire.h"
 
-class cOutput;
+#include "ctrackmem.h"
+#include "csiblingchild.h"
 
-class cModule {
-    cModule *pParent;
-    cModule *pChildren;
-    cModule *pPrev;
-    cModule *pNext;
+class cOutput;
+// handle a single module and wires associate with this module
+// 
+class cModule : public cSiblingChild TRACKMEM_BASE_COM {
     std::string name;
     std::vector<cWire *> wires;
     int depth;
     public:
-    cModule(const char *pName, cModule *parent = NULL, cModule *prev = NULL) {
-        depth = parent ? parent->depth + 1: 0;
+    cModule(const char *pName, cModule *parent = nullptr, cModule *prev = nullptr) : cSiblingChild(parent, prev) TRACKMEM_CONS_COM {
+        depth = parent != nullptr ? parent->depth + 1: 0;
         name = pName;
-        pParent = parent;
-        pChildren = NULL;
-        if (parent) {
-            if (parent->pChildren == NULL) {
-                parent->pChildren = this;
-            }
-        } else {
-        }
-        if (prev) {
-            while (prev->pNext) {
-                prev = prev->pNext;
-            }
-            prev->pNext = this;
-        }
-        pPrev = prev;
-        pNext = NULL;
     }
 
+    ~cModule();
+
+    cModule* getTop()         { return static_cast<cModule*>(cSiblingChild::getTop()); }
+    cModule* getParent()      { return static_cast<cModule*>(cSiblingChild::getParent()); }
+    cModule* getPrev()        { return static_cast<cModule*>(cSiblingChild::getPrev()); }
+    cModule* getNext()        { return static_cast<cModule*>(cSiblingChild::getNext()); }
+    cModule* getChildren()    { return static_cast<cModule*>(cSiblingChild::getChildren()); }
+    cModule* getFirstModule() { return static_cast<cModule*>(getFirstSibling()); }
+    cModule* getLastModule()  { return static_cast<cModule*>(getLastSibling()); }
+
     void addWire(cWire *pW) { wires.push_back(pW); }
-    cWire *getWire(int idx) { return 0 <= idx && ((size_t) idx) < wires.size() ? wires[idx] : 0; }
+    cWire *getWire(int idx) { return 0 <= idx && ((size_t) idx) < wires.size() ? wires[idx] : nullptr; }
     int getDepth() { return this ? depth : 0; }
 
     const char *getName() { return name.c_str(); }
 
-    cModule *getFirstModule() {
-        cModule *pRet = this;
-        if (pRet) {
-            while (pRet->pPrev) {
-                pRet = pRet->pPrev;
-            }
-        }
-        return pRet;
-    }
-
-    cModule *getLastModule() {
-        cModule *pRet = this;
-        if (pRet) {
-            while (pRet->pNext) {
-                pRet = pRet->pNext;
-            }
-        }
-        return pRet;
-    }
 
     size_t getWireCount() {
         size_t ret = 0;
-        for (cModule *p = getFirstModule(); p; p = p->pNext) {
-            if (p->pChildren) {
-                ret += p->pChildren->getWireCount();
+        for (cModule *p = getFirstModule(); p; p = p->getNext()) {
+            cModule* pMod = p->getChildren();
+            if (pMod != nullptr) {
+                ret += pMod->getWireCount();
             }
             ret += p->wires.size();
         }
@@ -100,23 +77,21 @@ class cModule {
     cModule *searchModule(const char *pPath) {
         const char *pSlash = strchr(pPath, '/');
         size_t len = pSlash ? pSlash - pPath : strlen(pPath);
-        cModule *pRet = NULL;
+        cModule *pRet = nullptr;
         if (pPath == pSlash) {
-            pRet = this;
-            while (pRet && pRet->pParent) {
-                pRet = pRet->pParent;
-            }
+            pRet = getTop();
         } else if (len == 2 && pPath[0] == '.' && pPath[1] == '.') {
-            pRet = pParent ? pParent : this;
+            pRet = getParent();
+            pRet = pRet ? pRet : this;
         } else if (len == 1 && pPath[0] == '.') {
             pRet = this;
         } else {
             pRet = getFirstModule();
-            while (pRet && strncmp(pRet->getName(), pPath, len)) {
-                pRet = pRet->pNext;
+            while (pRet != nullptr && strncmp(pRet->getName(), pPath, len)) {
+                pRet++;
             }
         }
-        if (pRet && pPath && pPath[len] == '/') {
+        if (pRet != nullptr && pPath && pPath[len] == '/') {
             pRet = pRet->searchModule(pPath + len + 1);
         }
 

@@ -27,14 +27,14 @@ cJSONbase::searchArray(const char *pStr)
 {
     cJSONarray *pArr = dynamic_cast<cJSONarray *>(this);
 
-    if (pArr) {
+    if (pArr != nullptr) {
         char *pEnd = 0;
         int idx = strtol(pStr, &pEnd, 0);
 
         if (pEnd && *pEnd == ']') {
             cJSONbase *pRet = pArr->getValue(idx);
 
-            if (pRet) {
+            if (pRet != nullptr) {
                 switch (pEnd[1]) {
                 case '/': return pRet->search(pEnd + 2);
                 case 0  : return pRet;
@@ -43,7 +43,7 @@ cJSONbase::searchArray(const char *pStr)
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 cJSONbase *
@@ -51,14 +51,14 @@ cJSONbase::searchObject(const char *pStr)
 {
     cJSONobject *pObj = dynamic_cast<cJSONobject *>(this);
 
-    if (pObj) {
+    if (pObj != nullptr) {
         char aBuffer[1024];
 
         pStr = getName(pStr, aBuffer, aBuffer + sizeof(aBuffer));
 
         cJSONbase *pRet = pObj->getValue(aBuffer);
-        if (pRet) {
-            switch(*pStr) {
+        if (pRet != nullptr) {
+            switch (*pStr) {
             case '/': return pRet->search(pStr + 1);
             case '[': return pRet->search(pStr);
             case 0: return pRet;
@@ -71,14 +71,15 @@ cJSONbase::searchObject(const char *pStr)
 
 // Return the last object and create path as needed
 // Pathe containing .. or . are not supported
-// if the VAR is a NULL pointer, the first created objects is stored there.
-cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
+// if the VAR is a nullptr pointer, the first created objects is stored there.
+cJSONbase *
+cJSONbase::searchOrGenerate(const char *pStr)
 {
-    cJSONbase *pRet = NULL;
+    cJSONbase *pRet = nullptr;
 
     if (pStr[0] == '/') {
         pRet = getParent();
-        if (pRet != NULL) {
+        if (pRet != nullptr) {
             return pRet->searchOrGenerate(pStr);
         }
         // we are at the top level now
@@ -93,7 +94,7 @@ cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
             int idx = strtol(pStr+1, &pEnd, 0);
             pEnd = skipWS(pEnd);
 
-            if (pArr == 0) {
+            if (pArr == nullptr) {
                 return 0;
             }
 
@@ -103,9 +104,9 @@ cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
                 }
                 pEnd = skipWS(pEnd+1);
                 switch (*pEnd) {
-                case '[': { // Followed by another array
+                case '[': {  // Followed by another array
                     cJSONarray *pNext = dynamic_cast<cJSONarray *>(pArr->getValue(idx));
-                    if (pNext == 0) {
+                    if (pNext == nullptr) {
                         pNext = new cJSONarray(pArr);
                         pArr->setValue(idx, pNext);
                     }
@@ -114,7 +115,7 @@ cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
                 } break;
                 case '/': {
                     cJSONobject *pNext = dynamic_cast<cJSONobject *>(pArr->getValue(idx));
-                    if (pNext == 0) {
+                    if (pNext == nullptr) {
                         pNext = new cJSONobject(pArr);
                         pArr->setValue(idx, pNext);
                     }
@@ -134,13 +135,13 @@ cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
 
             pStr = getName(pStr, aBuffer, aBuffer + sizeof(aBuffer)+1);
 
-            if (pObj == NULL) {
-                return NULL;
+            if (pObj == nullptr) {
+                return nullptr;
             }
 
             cJSONbase *pFound = pObj->getValue(aBuffer);
 
-            if (pFound == NULL) {
+            if (pFound == nullptr) {
                 switch (*pStr) {
                 case 0:
                     pObj->setValue(aBuffer, new cJSONnone(pObj), true);
@@ -163,14 +164,14 @@ cJSONbase *cJSONbase::searchOrGenerate(const char *pStr)
                     break;
                 case '[':
                     pRet = dynamic_cast<cJSONarray*>(pFound);
-                    if (pRet == 0) {
-                        return NULL;
+                    if (pRet == nullptr) {
+                        return nullptr;
                     }
                     break;
                 case '/':
                     pRet = dynamic_cast<cJSONobject*>(pFound);
-                    if (pRet == 0) {
-                        return NULL;
+                    if (pRet == nullptr) {
+                        return nullptr;
                     }
                     pStr++;
                     break;
@@ -185,17 +186,17 @@ cJSONbase *
 cJSONbase::generate(cJSONbase *pP, FILE *pIn)
 {
     size_t size;
+    size_t readSize;
     fseek(pIn, 0, SEEK_END);
     size = ftell(pIn);
     fseek(pIn, 0, SEEK_SET);
 
     cTmpBuf buffer(size + 1);
 
-    size_t readSize = fread(buffer.getChar(), 1, size, pIn);
-    buffer.getChar()[readSize] = 0;
-    const char *pPtr = buffer.getChar();
-    cJSONbase *pRet = cJSONbase::generate(pP, pPtr);
-
+    readSize = fread(buffer.getBuffer(), 1, size, pIn);
+    buffer.getBuffer()[readSize] = 0;
+    const char* pStart = buffer.getBuffer();
+    cJSONbase *pRet = cJSONbase::generate(pP, pStart);
 
     return pRet;
 }
@@ -203,25 +204,25 @@ cJSONbase::generate(cJSONbase *pP, FILE *pIn)
 cJSONbase *
 cJSONbase::generate(cJSONbase *pP, const char *&prStart)
 {
-    cJSONbase *pRet = NULL;
+    cJSONbase *pRet = nullptr;
 
     const char *pS = skipWS(prStart);
 
     switch (*pS) {
     case '\'':
-    case '"': // string
+    case '"':  // string
         pRet = new cJSONstring(pP, 0);
         break;
-    case '[': // array
+    case '[':  // array
         pRet = new cJSONarray(pP);
         break;
-    case '{': // object
+    case '{':  // object
         pRet = new cJSONobject(pP);
         break;
 
     case '-':
     case '+':
-    case '0': // scalar or float
+    case '0':  // scalar or float
     case '1':
     case '2':
     case '3':
@@ -237,12 +238,14 @@ cJSONbase::generate(cJSONbase *pP, const char *&prStart)
             pRet = new cJSONfloat(pP);
         }
         break;
+
     case 't':
-    case 'f': // true or false
+    case 'f':  // true or false
         if (0 == strncmp(pS, "true", 4) || 0 == strncmp(pS, "false", 5)) {
             pRet = new cJSONbool(pP);
         }
         break;
+
     case 'n':
         if (0 == strncmp(pS, "nil", 3) || 0 == strncmp(pS, "null", 3)) {
             pRet = new cJSONnone(pP);
@@ -251,14 +254,15 @@ cJSONbase::generate(cJSONbase *pP, const char *&prStart)
         break;
     }
 
-    if (pRet) {
+    if (pRet != nullptr) {
         const char *pEnd = pRet->fromStr(pS);
-        if (pEnd == 0) {
+
+        if (pEnd == nullptr) {
             delete pRet;
             pRet = 0;
         } else {
             pEnd = skipWS(pEnd);
-            if (! isObjectEnd(*pEnd) && *pEnd) {
+            if (false == isObjectEnd(*pEnd) && *pEnd) {
                 delete pRet;
                 pRet = 0;
             }
@@ -306,7 +310,7 @@ cJSONscalar::toStr(int &rLen, char *pBuffer, int deep)
 {
     char aBuffer[64];
     snprintf(aBuffer, sizeof(aBuffer) - 1, pFmt, value);
-    int len = (int) strlen(aBuffer);
+    int len = static_cast<int>(strlen(aBuffer));
 
     if (len < rLen) {
         strcpy(pBuffer, aBuffer);
@@ -327,13 +331,13 @@ cJSONscalar::fromStr(const char *pBuffer)
     } else if (*pBuffer == '+') {
         pBuffer++;
     }
-    char *pEnd = NULL;
+    char *pEnd = nullptr;
     value = strtoull(pBuffer, &pEnd, 0);
     pBuffer = pEnd;
     if (neg) {
         value = 1 + (~value);
     }
-    return pBuffer;
+    return pEnd;
 }
 
 char *
@@ -341,7 +345,7 @@ cJSONfloat::toStr(int &rLen, char *pBuffer, int deep)
 {
     char aBuffer[64];
     snprintf(aBuffer, sizeof(aBuffer) - 1, pFmt, value);
-    int len = (int) strlen(aBuffer);
+    int len = static_cast<int>(strlen(aBuffer));
 
     if (len < rLen) {
         strcpy(pBuffer, aBuffer);
@@ -355,7 +359,7 @@ cJSONfloat::toStr(int &rLen, char *pBuffer, int deep)
 const char *
 cJSONfloat::fromStr(const char *pBuffer)
 {
-    char *pEnd = NULL;
+    char *pEnd = nullptr;
     value = strtod(pBuffer, &pEnd);
     return pEnd;
 }
@@ -363,7 +367,7 @@ cJSONfloat::fromStr(const char *pBuffer)
 char *
 cJSONstring::toStr(int &rLen, char *pBuffer, int deep)
 {
-    int len = (int) (strlen(value) + (withTripple ? 6 : 2));
+    int len = static_cast<int>(strlen(value) + (withTripple ? 6 : 2));
 
     if (len < rLen) {
         *pBuffer++ = '"';
@@ -418,11 +422,11 @@ cJSONstring::fromStr(const char *pBuffer)
 char *
 cJSONarray::toStr(int &rLen, char *pBuffer, int deep)
 {
-    deep ++;
+    deep++;
 
     pBuffer = addDeepStringFirst(rLen, pBuffer, deep, '[');
 
-    for (size_t idx = 0; idx < value.size(); idx ++) {
+    for (size_t idx = 0; idx < value.size(); idx++) {
         if (idx) {
             pBuffer = addDeepStringFirst(rLen, pBuffer, deep, ',');
         }
@@ -440,7 +444,9 @@ cJSONarray::fromStr(const char *pBuffer)
     while (*pBuffer == sep) {
         pBuffer += 1;
         cJSONbase *pObj = generate(this, pBuffer);
-        if (pObj == NULL) return NULL;
+        if (pObj == nullptr) {
+            return nullptr;
+        }
         value.push_back(pObj);
         pBuffer = skipWS(pBuffer);
         sep = ',';
@@ -451,14 +457,14 @@ cJSONarray::fromStr(const char *pBuffer)
 char *
 cJSONobject::toStr(int &rLen, char *pBuffer, int deep)
 {
-    deep ++;
-    pBuffer = addDeepStringFirst(rLen, pBuffer, deep, '[');
+    deep++;
+    pBuffer = addDeepStringFirst(rLen, pBuffer, deep, '{');
 
-    for (size_t idx = 0; idx < value.size(); idx ++) {
+    for (size_t idx = 0; idx < value.size(); idx++) {
         cJSONobj *pO = value[idx];
-        int len = (int) strlen(pO->getName());
+        int len = static_cast<int>(strlen(pO->getName()));
 
-        if (idx) { 
+        if (idx) {
             pBuffer = addDeepStringFirst(rLen, pBuffer, deep, ',');
         }
 
@@ -488,21 +494,21 @@ cJSONobject::fromStr(const char *pBuffer)
     while (*pBuffer == sep) {
         pBuffer += 1;
         std::string name;
-        
+
         if (false == getString(name, pBuffer)) {
             return 0;
         }
 
         if (*pBuffer == ':') {
-            pBuffer ++;
+            pBuffer++;
             cJSONbase *pObj = generate(this, pBuffer);
-            if (pObj != NULL) {
+            if (pObj != nullptr) {
                 setValue(name, pObj, true);
             } else {
-                return NULL;
+                return nullptr;
             }
         } else {
-            return NULL;
+            return nullptr;
         }
         sep = ',';
         pBuffer = skipWS(pBuffer);
@@ -514,4 +520,3 @@ cJSONobject::fromStr(const char *pBuffer)
 
     return pBuffer + 1;
 }
-

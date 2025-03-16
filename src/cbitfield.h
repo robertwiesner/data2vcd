@@ -19,50 +19,121 @@ under the License.
 (c) 2025 Robert Wiesner
 */
 
-#ifndef CBITFIELD_H
+#ifndef SRC_CBITFIELD_H_
 #define CBITFIELD_H 1
 
+#include <stdint.h>
 #include <stdio.h>
 #include <map>
+#include <string>
 #include "cjson.h"
 #include "cmodule.h"
 #include "cwire.h"
-#include <string>
 #include "coutput.h"
+#include "ctrackmem.h"
 
-class cBitfield {
-    cOutput &rOutput;
+// collect the errors while processing the input objects
+class cError {
+    struct cEntry {
+        int line;
+        const char* pFkt;
+        const char* pMsg;
+        cEntry(int l, const char* pF, const char* pM) {
+            line = l;
+            pFkt = pF;
+            pMsg = pM;
+        }
+    };
+    std::vector<cEntry>errors;
+public:
+    cError() {}
+    void addError(int line, const char* pFkt, const char* pMsg) {
+        errors.push_back(cEntry(line, pFkt, pMsg));
+    }
+    size_t size() const { return errors.size(); }
+    char * getLastError(size_t len, char *pBuffer) {
+        if (errors.size()) {
+            cEntry& rEntry = errors[errors.size() - 1];
+            snprintf(pBuffer, len, "%s(%d): %s", rEntry.pFkt, rEntry.line, rEntry.pMsg);
+            pBuffer[len - 1] = 0;
+            errors.pop_back();
+            return pBuffer;
+        }
+        else {
+            return 0;
+        }
+    }
+};
+
+// handle the bitfield for a JSOn base module description
+class cBitfield TRACKMEM_BASE_COL {
+    cError  errors;
+    cOutput *pOutput;
     cModule *pFirst;
+    int streamCnt;
+    int* pStreamID;
+    const char* pBaseName;
     struct sModWireInfo {
         cModule *pMod;
         std::map<int, cWire *>wires;
-        sModWireInfo(cModule *pM) { pMod = pM; }
+        explicit sModWireInfo(cModule *pM) { pMod = pM; }
     };
-    std::map<unsigned long long, sModWireInfo *>entry;
-    std::map<cModule *, unsigned long long>module2index;
-    cModule *createModuleNode(cModule *pParent, cJSONbase *, unsigned long long);
-    cModule *createModuleIPX(cModule *pParent, cJSONbase *, unsigned long long);
-    cModule *createModule(cModule *pParent, cJSONbase *, unsigned long long);
+    std::map<uint64_t, sModWireInfo *>entry;
+    std::map<cModule *, uint64_t>module2index;
+
+    // helper functions to create the module bitfields
+    // These are based for the internal representation with "<node>" objects
+    uint64_t createNewWireNode(cModule* pMod, uint64_t modIdx, const char *pName, cJSONbase*pObj, uint64_t start);
+    cModule* createNewModuleNode(cModule* pParent, cModule* pMod, cJSONbase*, uint64_t, const char *);
+    cModule* createAllModuleNode(cModule* pParent, cJSONbase*, uint64_t);
+
+    // This is using the format desciption use by the ELA600 JSON object
+    bool createNewWireIPX(cModule* pMod, uint64_t modIdx, const char* pName, cJSONbase* pBits, cJSONbase* pQual, bool isSingle);
+    cModule* createNewModuleIPX(cModule* pParent, cModule* pMod, cJSONarray*, uint64_t, const char*);
+    cModule* createAllModuleIPX(cModule* pParent, cJSONarray*, uint64_t);
+    cModule *createAllModule(cModule *pParent, cJSONbase *, uint64_t);
 public:
-    cBitfield(cOutput &rO, cJSONbase *pJSON);
+    cBitfield(cOutput *pO, cJSONbase *pJSON = 0);
+    cBitfield(cOutput &rO, cJSONbase *pJSON = 0) : cBitfield(&rO, pJSON) { }
     ~cBitfield();
 
-    void addJsonModule(cJSONbase *pBase, unsigned long long base);
-    void printHeader(const char *pPrefix);
-    void setTime(unsigned long long);
-    
-    void updateValue(unsigned long long id, int byteSize, const void *pPtr);
-
-    void updateValue(cModule *pMod, int byteSize, const void *pPtr) {
-        std::map<cModule *, unsigned long long>::iterator it = module2index.find(pMod);
-        if (it != module2index.end()) {
-            updateValue(it->second, byteSize, pPtr);
+    void printAllError() {
+        char aBuffer[4096];
+        char* pErr;
+        while ((pErr = errors.getLastError(sizeof(aBuffer), aBuffer)) != nullptr) {
+            printf("%s\n", pErr);
         }
     }
 
-    void updateValue(const char *pName, int byteSize, const void *pPtr) {
+    size_t getErrorCount() { return errors.size(); }
+    char* getLastError(size_t len, char* pBuffer) {
+        return errors.getLastError(len, pBuffer);
+    }
+
+    void addJsonModules(cJSONbase* pBase, uint64_t base, int streamCount = 0, int* pStreamId = 0, const char* pBaseName = 0);
+    void printHeader(const char *pPrefix);
+    void setTime(uint64_t);
+
+    void updateValue(uint64_t id, int byteSize, const void *pPtr);
+
+    void updateValuePtr(cModule *pMod, int byteSize, const void *pPtr) {
+        std::map<cModule *, uint64_t>::iterator it = module2index.find(pMod);
+        if (it != module2index.end()) {
+            updateValue(it->second, byteSize, pPtr);
+        }
+        else {
+            errors.addError(__LINE__, __func__, "module index not found");
+        }
+    }
+
+    void updateValuePtr(const char *pName, int byteSize, const void *pPtr) {
         cModule *pMod = pFirst->searchModule(pName);
-        updateValue(pMod, byteSize, pPtr);
+        if (pMod != nullptr) {
+            updateValuePtr(pMod, byteSize, pPtr);
+        }
+        else {
+            errors.addError(__LINE__, __func__, "module index not found");
+        }
     }
     cModule *getFirstModule() { return pFirst; }
 
@@ -70,4 +141,5 @@ public:
     void finish();
 };
 
-#endif
+#endif  // SRC_CBITFIELD_H_
+

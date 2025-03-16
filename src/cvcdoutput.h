@@ -19,22 +19,28 @@ under the License.
 (c) 2025 Robert Wiesner
 */
 
-#ifndef CVCDOUTPUT_H
-#define CVCDOUTPUT_H
+#ifndef SRC_CVCDOUTPUT_H_
+#define SRC_CVCDOUTPUT_H_ 1
 
-#include <stdio.h>
-#include <string.h>
+#include <stdint.h>
+#include <ctype.h>
+#include <vector>
+#include <string>
+#include <cstdio>
+
 #include "coutput.h"
+#include "ctrackmem.h"
 
 class cVCDOutput : public cOutput {
     static const int maxRange = 127 - 33;
     size_t wireCount;
     size_t wireCountMax;
-    int wireCountChar; 
-    long   firstTimeOff;
-    long long lastTime; 
-    char *pRenameBuffer;
-    size_t renameBufferSize;
+    int32_t wireCountChar;
+    int64_t firstTimeOff;
+    int64_t lastTime;
+    std::vector<char> renameBuffer;
+
+    // This generates the short name for the wire
     const char *shortWireGenerator(char *pBuffer) {
         *--pBuffer = 0;
         size_t val = wireCount;
@@ -44,12 +50,13 @@ class cVCDOutput : public cOutput {
 
             while (cnt) {
                 cnt = cnt / maxRange;
-                wireCountChar ++;
+                wireCountChar++;
             }
             wireCountChar = wireCountChar ? wireCountChar : 1;
         }
+
         int charCnt = wireCountChar;
-        
+
         do {
             *--pBuffer = 33 + val % maxRange;
             val /= maxRange;
@@ -60,55 +67,45 @@ class cVCDOutput : public cOutput {
 
     const char *printableCharOnly(const char *pStr) {
         size_t len = strlen(pStr);
-        if (renameBufferSize <= len) {
-            renameBufferSize = (len + 0x1000) & ~0xfff;
-            if (pRenameBuffer) { delete[] pRenameBuffer;}
-            pRenameBuffer = new char[renameBufferSize];
+        if (renameBuffer.size() <= len) {
+            renameBuffer.resize((len + 0x1000) & ~0xfff);
         }
-        char *pDst = pRenameBuffer;
+        char *pDst = renameBuffer.data();
         char c;
-        while ((c = *pStr++)) {
-            if ('A' <= c && c <='Z') {
-                *pDst++ = c;
-            } else 
-            if ('a' <= c && c <='z') {
-                *pDst++ = c;
-            } else 
-            if ('0' <= c && c <='9') {
-                *pDst++ = c;
-            } else {
-                *pDst++ = '_';
-            }
+        while (0 != (c = *pStr++)) {
+            *pDst = isalnum(c) ? c : '_';
         }
         *pDst = 0;
-        return pRenameBuffer;
+        return renameBuffer.data();
     }
-    public:
-    cVCDOutput(FILE *pO) : cOutput(pO) {
+
+  public:
+    explicit cVCDOutput(FILE *pO) : cOutput(pO), renameBuffer() {
         wireCount     = 0;
         wireCountMax  = 0;
         firstTimeOff  = 0;
         wireCountChar = 0;
-        renameBufferSize = 0;
-        pRenameBuffer = 0;
     }
 
     virtual ~cVCDOutput();
-    
+
     virtual const char *getStringValue(cWire *);
 
     virtual void headerStart();
-    virtual void headerSetStartTime(long long);
+    virtual void headerSetStartTime(int64_t);
     virtual void headerModuleStart(cModule *, std::string prefix);
     virtual void headerModuleEnd(cModule *);
     virtual void headerWire(cWire *, std::string prefix);
     virtual void headerEnd();
-    
-    virtual void setTime(long long);
-    virtual void print(cWire *pW) { if (pOut && pW && pW->hasChanged()) { fprintf(pOut, "%s\n", getStringValue(pW)); }}
+
+    virtual void setTime(int64_t);
+    virtual void print(cWire *pW) {
+        if (pOut != nullptr && pW != nullptr && pW->hasChanged()) {
+            fprintf(pOut, "%s\n", getStringValue(pW));
+        }
+    }
 
     virtual void finish();
-
 };
 
-#endif
+#endif  // SRC_CVCDOUTPUT_H_

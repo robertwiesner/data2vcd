@@ -19,6 +19,20 @@ under the License.
 (c) 2025 Robert Wiesner
 */
 
-#include "cwire.h"
+#include <cstdio>
+#include "ctrackmem.h"
 
+#if ENABLE_TRACKING
 
+std::map<void*, cTrackMem::sData *, cTrackMem::sAddrCmp> cTrackMem::collect;
+
+void cTrackMem::dumpData() {
+    int cnt = 0;
+    for (const auto &it : collect) {
+        printf("%p %s:%d\n", it.first, it.second->pFileName, it.second->line);
+        cnt++;
+    }
+    printf("Remaing allocation: %d\n", cnt);
+}
+
+#endif

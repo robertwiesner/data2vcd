@@ -19,17 +19,19 @@ under the License.
 (c) 2025 Robert Wiesner
 */
 
-#ifndef COUTPUT_H
-#define COUTPUT_H
+#ifndef SRC_COUTPUT_H_
+#define SRC_COUTPUT_H_ 1
 
+#include <stdint.h>
 #include <stdio.h>
 #include <vector>
 #include <string>
 #include "cwire.h"
 
+#include "ctrackmem.h"
 class cModule;
 
-class cOutput {
+class cOutput TRACKMEM_BASE_COL {
     protected:
     struct sData {
         cModule *pModule;
@@ -41,32 +43,33 @@ class cOutput {
     cModule *pLastModule;
 
     char aBuffer[1024];
-    FILE *pOut; 
+    FILE *pOut;
+
     public:
-    cOutput(FILE *pO = NULL) {
+    cOutput(FILE *pO = nullptr) TRACKMEM_CONS_COL {
         pOut = pO;
-        pLastModule = NULL;
+        pLastModule = nullptr;
     }
+    virtual ~cOutput();
 
     void addError(const char *pErr) { errors.push_back(std::string(pErr)); }
     void addError(std::string err) { errors.push_back(err); }
-    virtual ~cOutput();
 
     void setOutputFile(FILE *pO) { pOut = pO; }
     
     virtual const char *getStringValue(cWire *);
     virtual void headerStart();
-    virtual void headerSetStartTime(long long);
+    virtual void headerSetStartTime(int64_t);
     virtual void headerModuleStart(cModule *, std::string prefix);
     virtual void headerModuleEnd(cModule *);
     virtual void headerWire(cWire *, std::string prefix);
     virtual void headerEnd();
     
-    virtual void setTime(long long);
+    virtual void setTime(int64_t);
     virtual void print(cWire *pW) {
-        if (pOut && pW && pW->hasChanged()) { 
-            fprintf(pOut, "%s: 0x%0*llX\n", pW->getName(),
-                    (((int) pW->getBits()) + 7) / 8, 
+        if (pOut != nullptr && pW != nullptr && pW->hasChanged()) {
+            fprintf(pOut, "%s: 0x%0*lX\n", pW->getName(),
+                    static_cast<int>((pW->getBits() + 7) / 8),
                     pW->getAsUnsignedLongLong());
         }
     }
@@ -76,4 +79,4 @@ class cOutput {
 
 };
 
-#endif
+#endif  // SRC_COUTPUT_H_

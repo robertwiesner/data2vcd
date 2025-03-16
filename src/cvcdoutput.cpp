@@ -19,10 +19,11 @@ under the License.
 (c) 2025 Robert Wiesner
 */
 
+#include <stdio.h>
+
 #include "cvcdoutput.h"
 #include "cmodule.h"
 #include "cwire.h"
-#include <stdio.h>
 
 void cVCDOutput::headerStart()
 {
@@ -42,22 +43,22 @@ void cVCDOutput::headerStart()
     fprintf(pOut, "$timescale 1ps $end\n");
 }
 
-void cVCDOutput::headerSetStartTime(long long time)
+void cVCDOutput::headerSetStartTime(int64_t time)
 {
-    fprintf(pOut, "Start time: %lld", time);
+    fprintf(pOut, "Start time: %ld", time);
 }
 
 void cVCDOutput::headerModuleStart(cModule *pM, std::string prefix)
 {
     pLastModule = pM;
-    items.push_back(new sData(pM, NULL));
+    items.push_back(new sData(pM, nullptr));
     fprintf(pOut, "$scope module %s $end\n", printableCharOnly(pM->getName()));
 }
 
 void cVCDOutput::headerModuleEnd(cModule *pM)
 {
     pLastModule = pM;
-    items.push_back(new sData(pM, NULL));
+    items.push_back(new sData(pM, nullptr));
     fprintf(pOut, "$upscope $end\n");
 }
 
@@ -72,7 +73,10 @@ void cVCDOutput::headerWire(cWire *pW, std::string prefix)
     }
 
     pW->setShortName(shortWireGenerator(aBuffer + sizeof(aBuffer)));
-    fprintf(pOut, "$var wire %d %s %s $end\n", (int) pW->getBits(), pW->getShortName(), printableCharOnly(pW->getName()));
+    fprintf(pOut, "$var wire %d %s %s $end\n",
+        static_cast<int32_t>(pW->getBits()),
+        pW->getShortName(),
+        printableCharOnly(pW->getName()));
 }
 
 void cVCDOutput::headerEnd()
@@ -83,26 +87,26 @@ void cVCDOutput::headerEnd()
     fprintf(pOut, "#0                    \n");
     fprintf(pOut, "$dumpvars\n");
 
-    for (std::vector<sData *>::iterator it = items.begin(); it != items.end(); it++) {
-        cWire *pW = (*it)->pWire;
+    for (auto &it : items) {
+        cWire *pW = it->pWire;
         print(pW);
     }
 }
-    
-void cVCDOutput::setTime(long long time)
+
+void cVCDOutput::setTime(int64_t time)
 {
     flush();
     if (0 < firstTimeOff) {
         long currOff  = ftell(pOut);
         if (1 < time && 0 == fseek(pOut, firstTimeOff, SEEK_SET)) {
-            fprintf(pOut, "#%lld", time - 1);
+            fprintf(pOut, "#%ld", time - 1);
             fseek(pOut, currOff, SEEK_SET);
         }
         firstTimeOff = 0;
     }
     if (lastTime != time) {
         lastTime = time;
-        fprintf(pOut, "#%lld\n", time);
+        fprintf(pOut, "#%ld\n", time);
     }
 }
 
@@ -136,14 +140,13 @@ cVCDOutput::getStringValue(cWire *pW)
 
 void cVCDOutput::finish()
 {
-    if (pOut) {
-        fprintf(pOut, "#%lld\n", lastTime + 1);
+    if (pOut != nullptr) {
+        fprintf(pOut, "#%ld\n", lastTime + 1);
         fprintf(pOut, "DONE!!!\n");
+        pOut = nullptr;
     }
-    pOut = NULL;
 }
 
 cVCDOutput::~cVCDOutput()
 {
-
 }
