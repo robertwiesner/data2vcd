@@ -20,7 +20,7 @@ under the License.
 */
 
 #ifndef SRC_CBITFIELD_H_
-#define SRC_CBITFIELD_H 1
+#define SRC_CBITFIELD_H_ 1
 
 #include <stdint.h>
 #include <stdio.h>
