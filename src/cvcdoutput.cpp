@@ -98,7 +98,7 @@ void cVCDOutput::setTime(int64_t time)
     flush();
     if (0 < firstTimeOff) {
         long currOff  = ftell(pOut);
-        if (1 < time && 0 == fseek(pOut, static_case<long>(firstTimeOff), SEEK_SET)) {
+        if (1 < time && 0 == fseek(pOut, static_cast<long>(firstTimeOff), SEEK_SET)) {
             fprintf(pOut, "#%" ELLELL "d", time - 1);
             fseek(pOut, currOff, SEEK_SET);
         }
