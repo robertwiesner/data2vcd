@@ -45,7 +45,7 @@ void cVCDOutput::headerStart()
 
 void cVCDOutput::headerSetStartTime(int64_t time)
 {
-    fprintf(pOut, "Start time: %ld", time);
+    fprintf(pOut, "Start time: %" ELLELL "d", time);
 }
 
 void cVCDOutput::headerModuleStart(cModule *pM, std::string prefix)
@@ -98,15 +98,15 @@ void cVCDOutput::setTime(int64_t time)
     flush();
     if (0 < firstTimeOff) {
         long currOff  = ftell(pOut);
-        if (1 < time && 0 == fseek(pOut, firstTimeOff, SEEK_SET)) {
-            fprintf(pOut, "#%ld", time - 1);
+        if (1 < time && 0 == fseek(pOut, static_case<long>(firstTimeOff), SEEK_SET)) {
+            fprintf(pOut, "#%" ELLELL "d", time - 1);
             fseek(pOut, currOff, SEEK_SET);
         }
         firstTimeOff = 0;
     }
     if (lastTime != time) {
         lastTime = time;
-        fprintf(pOut, "#%ld\n", time);
+        fprintf(pOut, "#%" ELLELL "d\n", time);
     }
 }
 
@@ -141,7 +141,7 @@ cVCDOutput::getStringValue(cWire *pW)
 void cVCDOutput::finish()
 {
     if (pOut != nullptr) {
-        fprintf(pOut, "#%ld\n", lastTime + 1);
+        fprintf(pOut, "#%" ELLELL "d\n", lastTime + 1);
         fprintf(pOut, "DONE!!!\n");
         pOut = nullptr;
     }
