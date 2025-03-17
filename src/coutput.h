@@ -29,6 +29,15 @@ under the License.
 #include "cwire.h"
 
 #include "ctrackmem.h"
+
+#ifndef ELLELL
+#if _WIN32
+#define ELLELL "ll"
+#else
+#define ELLELL "l"
+#endif
+#endif  // ELLELL
+
 class cModule;
 
 class cOutput TRACKMEM_BASE_COL {
@@ -68,7 +77,7 @@ class cOutput TRACKMEM_BASE_COL {
     virtual void setTime(int64_t);
     virtual void print(cWire *pW) {
         if (pOut != nullptr && pW != nullptr && pW->hasChanged()) {
-            fprintf(pOut, "%s: 0x%0*lX\n", pW->getName(),
+            fprintf(pOut, "%s: 0x%0*" ELLELL "X\n", pW->getName(),
                     static_cast<int>((pW->getBits() + 7) / 8),
                     pW->getAsUnsignedLongLong());
         }
