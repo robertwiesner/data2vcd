@@ -31,7 +31,7 @@ void cOutput::headerStart()
 
 void cOutput::headerSetStartTime(int64_t time)
 {
-    fprintf(pOut, "Start time: %ld", time);
+    fprintf(pOut, "Start time: %" ELLELL "d", time);
 }
 
 void cOutput::headerModuleStart(cModule *pM, std::string prefix)
@@ -64,7 +64,7 @@ void cOutput::headerEnd()
 void cOutput::setTime(int64_t time)
 {
     flush();
-    fprintf(pOut, "Start time: %ld\n", time);
+    fprintf(pOut, "Start time: %" ELLELL "d\n", time);
 }
 
 const char *cOutput::getStringValue(cWire *pW)
@@ -90,12 +90,12 @@ const char *cOutput::getStringValue(cWire *pW)
         break;
 
     case eWT_OCT:
-        snprintf(pPtr, pEnd - pPtr, "%lo", pW->getAsUnsignedLongLong());
+        snprintf(pPtr, pEnd - pPtr, "%" ELLELL "o", pW->getAsUnsignedLongLong());
         pPtr += strlen(pPtr);
         break;
 
     case eWT_DEC:
-        snprintf(pPtr, pEnd - pPtr, "%ld", pW->getAsSignedLongLong());
+        snprintf(pPtr, pEnd - pPtr, "%" ELLELL "d", pW->getAsSignedLongLong());
         pPtr += strlen(pPtr);
         break;
 
