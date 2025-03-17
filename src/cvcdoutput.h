@@ -73,9 +73,9 @@ class cVCDOutput : public cOutput {
         char *pDst = renameBuffer.data();
         char c;
         while (0 != (c = *pStr++)) {
-            *pDst = isalnum(c) ? c : '_';
+            *pDst++ = isalnum(c) ? c : '_';
         }
-        *pDst = 0;
+        *pDst++ = 0;
         return renameBuffer.data();
     }
 
