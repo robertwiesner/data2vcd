@@ -442,12 +442,20 @@ cJSONarray::fromStr(const char *pBuffer)
     char sep = '[';
 
     while (*pBuffer == sep) {
-        pBuffer += 1;
-        cJSONbase *pObj = generate(this, pBuffer);
-        if (pObj == nullptr) {
-            return nullptr;
+        pBuffer = skipWS(pBuffer + 1);
+        if (*pBuffer == ',' && (sep == '[' || sep == ',')) {
+            // this is a "[ ," or ", ," string 
+            value.push_back(new cJSONnone(this));
+        } else if (*pBuffer == ']') {
+            // this is a "[ ]" or ", ]" string
+            break;
+        } else {
+            cJSONbase *pObj = generate(this, pBuffer);
+            if (pObj == nullptr) {
+                return nullptr;
+            }
+            value.push_back(pObj);
         }
-        value.push_back(pObj);
         pBuffer = skipWS(pBuffer);
         sep = ',';
     }
@@ -492,23 +500,31 @@ cJSONobject::fromStr(const char *pBuffer)
     char sep = '{';
 
     while (*pBuffer == sep) {
-        pBuffer += 1;
-        std::string name;
+        pBuffer = skipWS(pBuffer + 1);
 
-        if (false == getString(name, pBuffer)) {
-            return 0;
+        // if we have additional command ignore them
+        if (*pBuffer == '}') {
+            // if "{ }" or ", }" is seen skipt it
+            break;
         }
+        
+        if (*pBuffer != ',') {
+            std::string name;
+            if (false == getString(name, pBuffer)) {
+                return 0;
+            }
 
-        if (*pBuffer == ':') {
-            pBuffer++;
-            cJSONbase *pObj = generate(this, pBuffer);
-            if (pObj != nullptr) {
-                setValue(name, pObj, true);
+            if (*pBuffer == ':') {
+                pBuffer++;
+                cJSONbase *pObj = generate(this, pBuffer);
+                if (pObj != nullptr) {
+                    setValue(name, pObj, true);
+                } else {
+                    return nullptr;
+                }
             } else {
                 return nullptr;
             }
-        } else {
-            return nullptr;
         }
         sep = ',';
         pBuffer = skipWS(pBuffer);

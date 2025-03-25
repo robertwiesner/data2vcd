@@ -232,11 +232,14 @@ class cJSONbase TRACKMEM_BASE_COL {
     virtual const char *fromStr(const char *pBuffer) = 0;
 
     virtual cJSONbase* removeObject(cJSONbase *pP) { return 0; } // do nothing
-    static cJSONbase *generate(cJSONbase *pP, const char *&);
-    static cJSONbase *generate(cJSONbase *pP, char *&pStr) {
-        const char *pConstStr = pStr;
+    static cJSONbase *genStr(cJSONbase *pP, const char *pS) {
+        return generate(pP, pS);
+    }
+    static cJSONbase *generate(cJSONbase *pP, const char *&rpStr);
+    static cJSONbase *generate(cJSONbase *pP, char *&rpStr) {
+        const char *pConstStr = rpStr;
         cJSONbase *pRet = generate(pP, pConstStr);
-        pStr = const_cast<char *>(pConstStr);
+        rpStr = const_cast<char *>(pConstStr);
         return pRet;
     }
 
@@ -278,11 +281,13 @@ class cJSONnone : public cJSONbase {
         return 0;
     }
     const char *fromStr(const char *pBuffer) {
-        if (pBuffer[0] == 'n' && pBuffer[1] == 'i' && pBuffer[2] == 'l' && isEnd(pBuffer[3])) {
-            return pBuffer + 3;
-        } else {
-            return 0;
+        if (pBuffer[0] == 'n' && pBuffer[1] == 'i' && pBuffer[2] == 'l') {
+            pBuffer = skipWS(pBuffer + 3);
+            if (isCommaOrClose(*pBuffer)) {
+                return pBuffer;
+            }
         }
+        return 0;
     }
 };
 
