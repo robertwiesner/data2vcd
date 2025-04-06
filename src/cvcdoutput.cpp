@@ -37,7 +37,7 @@ void cVCDOutput::headerStart()
 
     fprintf(pOut, "$comment\n");
     fprintf(pOut, "    Revision information\n");
-    fprintf(pOut, "$version\n");
+    fprintf(pOut, "$end\n");
 
 
     fprintf(pOut, "$timescale 1ps $end\n");
